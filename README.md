@@ -11,6 +11,8 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Procedurally generated looping forest ambience (wind and leaf rustle)
 - Procedurally synthesized bird calls on a separate, quieter audio layer
 - 10 handcrafted challenge levels with distinct platform layouts and hazard patterns
+- Main menu with a selectable two-column list of all ten levels
+- In-game **LEVEL SELECT** button to return to the menu at any time
 - Level selection using `[` / `]` or Page Down / Page Up; touch-device level buttons
 
 ## Run
@@ -22,8 +24,9 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - **A / D** or **Left / Right**: move
 - **Space / W / Up**: jump
 - **R**: restart after a death or replay the current level after clearing it
-- **]** or **Page Up**: next level
-- **[** or **Page Down**: previous level
+- **]** or **Page Up**: start the next level
+- **[** or **Page Down**: start the previous level
+- **LEVEL SELECT**: open the main menu and choose any of the ten levels
 - On touch devices, use the on-screen arrows and jump button.
 
 ## Export
