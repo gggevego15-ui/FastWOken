@@ -297,7 +297,8 @@ func _load_level(index: int) -> void:
 	if is_instance_valid(camera):
 		camera.limit_right = int(level_end)
 	if is_instance_valid(message_label):
-		message_label.text = "LEVEL %02d / 10   —   [ ] to change level" % (selected_level + 1)
+		var level_names := ["FOREST ENTRY", "BROKEN CANOPY", "ROOT MAZE", "MOSSY CLIFFS", "FLOODED HOLLOW", "THORN RUN", "RAVINE STEPS", "NIGHTWOOD", "SHATTERED BRIDGE", "THE LAST CANOPY"]
+		message_label.text = "%02d / 10   •   %s   •   HARDCORE" % [selected_level + 1, level_names[selected_level]]
 	_update_hud()
 	queue_redraw()
 
