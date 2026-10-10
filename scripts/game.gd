@@ -62,6 +62,54 @@ func _save_progress() -> void:
 		push_warning("FastWOken could not save progress (error %d)." % error)
 
 
+func _play_sfx(kind: String) -> void:
+	# Short effects are synthesized in code; no external audio assets are required.
+	const SAMPLE_RATE := 22050
+	var duration := 0.24 if kind == "jump" else (0.34 if kind == "crystal" else 0.72)
+	var sample_count := int(SAMPLE_RATE * duration)
+	var pcm := PackedByteArray()
+	pcm.resize(sample_count * 2)
+	var phase := 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	for i in range(sample_count):
+		var t := float(i) / SAMPLE_RATE
+		var progress := t / duration
+		var envelope := 1.0 - progress
+		var sample := 0.0
+		if kind == "jump":
+			var frequency := lerpf(240.0, 620.0, progress)
+			phase += TAU * frequency / SAMPLE_RATE
+			sample = (sin(phase) * 0.72 + sin(phase * 2.0) * 0.18) * envelope * 0.42
+		elif kind == "crystal":
+			var frequency := 880.0 if progress < 0.45 else 1320.0
+			phase += TAU * frequency / SAMPLE_RATE
+			sample = (sin(phase) * 0.7 + sin(phase * 2.5) * 0.22) * envelope * 0.38
+		else:
+			var frequency := lerpf(180.0, 920.0, progress)
+			phase += TAU * frequency / SAMPLE_RATE
+			var shimmer := sin(phase * 2.03) * 0.22 + sin(phase * 3.01) * 0.12
+			var airy_noise := rng.randf_range(-1.0, 1.0) * (1.0 - progress) * 0.08
+			sample = (sin(phase) * 0.48 + shimmer + airy_noise) * envelope * 0.5
+		var signed_sample := int(clampf(sample, -0.95, 0.95) * 32767.0)
+		if signed_sample < 0:
+			signed_sample += 65536
+		pcm[i * 2] = signed_sample & 0xff
+		pcm[i * 2 + 1] = (signed_sample >> 8) & 0xff
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = SAMPLE_RATE
+	stream.stereo = false
+	stream.data = pcm
+	var audio_player := AudioStreamPlayer.new()
+	audio_player.name = "SFX_" + kind
+	audio_player.stream = stream
+	audio_player.volume_db = -7.0 if kind == "portal" else -4.0
+	add_child(audio_player)
+	audio_player.finished.connect(audio_player.queue_free)
+	audio_player.play()
+
+
 func _setup_forest_audio() -> void:
 	# Generate loopable ambient audio in code so the project needs no downloaded assets.
 	var wind_player := AudioStreamPlayer.new()
@@ -556,6 +604,8 @@ func _process(_delta: float) -> void:
 			Input.action_release("jump")
 		applied_touch_jump = touch_jump
 
+	if Input.is_action_just_pressed("jump") and player.is_on_floor():
+		_play_sfx("jump")
 	if player.global_position.y > 620:
 		_respawn()
 	if Input.is_action_just_pressed("restart"):
@@ -573,6 +623,7 @@ func _on_hazard_entered(body: Node2D) -> void:
 func _on_crystal_collected(body: Node2D, crystal: Area2D) -> void:
 	if body != player or not is_instance_valid(crystal):
 		return
+	_play_sfx("crystal")
 	score += 1
 	crystal.queue_free()
 	_update_hud()
@@ -580,6 +631,7 @@ func _on_crystal_collected(body: Node2D, crystal: Area2D) -> void:
 func _on_goal_reached(body: Node2D) -> void:
 	if body != player or won:
 		return
+	_play_sfx("portal")
 	won = true
 	player.controls_locked = true
 	var level_key := str(selected_level)
