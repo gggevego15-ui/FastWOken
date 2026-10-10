@@ -256,26 +256,50 @@ func _load_level(index: int) -> void:
 	queue_redraw()
 
 func _build_level() -> void:
-	# Each level has a hand-authored platform route and hazard rhythm.
-	var layouts := [
-		{"name":"Forest Entry", "ground":[[240,480],[760,260],[1130,300],[1560,300],[2040,400],[2440,280]], "platforms":[[520,365,112],[900,315,112],[1280,365,112],[1690,300,120],[1900,355,100],[2290,315,120]], "spikes":[[340,4],[760,3],[1130,4],[1560,4],[2010,3]], "crystals":[[190,410],[520,320],[760,410],[900,270],[1280,320],[1690,255],[1900,310],[2160,410]]},
-		{"name":"Broken Canopy", "ground":[[220,440],[690,180],[1050,180],[1440,210],[1850,200],[2280,360]], "platforms":[[450,380,90],[590,330,86],[850,370,88],[1000,300,82],[1250,350,90],[1390,285,80],[1640,340,90],[1790,285,84],[2100,350,100]], "spikes":[[310,4],[690,3],[1050,3],[1440,3],[1850,3]], "crystals":[[170,410],[450,335],[590,285],[850,325],[1000,255],[1250,305],[1390,240],[1640,295],[1790,240],[2100,305]]},
-		{"name":"Root Maze", "ground":[[210,420],[650,170],[1010,180],[1420,180],[1810,180],[2220,300]], "platforms":[[420,370,88],[520,310,80],[800,350,82],[900,285,82],[1170,355,84],[1280,300,82],[1580,350,86],[1690,285,82],[1980,350,90],[2090,295,82]], "spikes":[[290,4],[650,3],[1010,3],[1420,3],[1810,3]], "crystals":[[160,410],[420,325],[520,265],[800,305],[900,240],[1170,310],[1280,255],[1580,305],[1690,240],[1980,305]]},
-		{"name":"Mossy Cliffs", "ground":[[220,440],[690,160],[1070,160],[1450,160],[1830,160],[2250,340]], "platforms":[[440,390,100],[570,335,90],[820,390,90],[950,325,90],[1200,370,90],[1330,300,86],[1580,365,90],[1710,295,90],[1980,360,90],[2110,300,86]], "spikes":[[300,4],[690,3],[1070,3],[1450,3],[1830,3]], "crystals":[[180,410],[440,345],[570,290],[820,345],[950,280],[1200,325],[1330,255],[1580,320],[1710,250],[1980,315]]},
-		{"name":"Flooded Hollow", "ground":[[220,420],[650,180],[1030,180],[1410,180],[1790,180],[2200,320]], "platforms":[[440,360,100],[560,300,86],[820,345,88],[940,280,82],[1200,350,88],[1320,285,84],[1580,340,90],[1700,275,84],[1970,340,90],[2090,285,84]], "spikes":[[300,3],[650,3],[1030,3],[1410,3],[1790,3]], "crystals":[[160,410],[440,315],[560,260],[820,300],[940,240],[1200,305],[1320,245],[1580,295],[1700,235],[1970,295]]},
-		{"name":"Thorn Run", "ground":[[230,450],[700,170],[1080,160],[1460,170],[1840,170],[2290,380]], "platforms":[[480,365,90],[590,305,82],[860,355,82],[970,290,80],[1240,350,82],[1350,285,80],[1620,345,84],[1730,280,82],[2050,350,90],[2170,290,82]], "spikes":[[310,5],[700,4],[1080,4],[1460,4],[1840,4]], "crystals":[[170,410],[480,320],[590,265],[860,310],[970,245],[1240,305],[1350,240],[1620,300],[1730,235],[2050,305]]},
-		{"name":"Ravine Steps", "ground":[[220,420],[660,160],[1050,160],[1440,160],[1830,160],[2250,340]], "platforms":[[420,390,90],[530,340,80],[640,290,78],[820,370,82],[930,320,78],[1040,270,78],[1210,365,82],[1320,315,78],[1430,265,78],[1600,365,82],[1710,315,78],[1820,265,78],[2010,355,84],[2120,300,80]], "spikes":[[300,4],[660,3],[1050,3],[1440,3],[1830,3]], "crystals":[[160,410],[420,345],[640,245],[820,325],[1040,225],[1210,320],[1430,220],[1600,320],[1820,220],[2010,310]]},
-		{"name":"Nightwood", "ground":[[220,420],[660,170],[1030,170],[1410,170],[1790,170],[2210,320]], "platforms":[[430,370,90],[550,310,82],[800,360,84],[920,295,80],[1180,355,84],[1300,290,80],[1560,350,84],[1680,285,80],[1940,350,86],[2060,290,82]], "spikes":[[300,4],[660,3],[1030,3],[1410,3],[1790,3]], "crystals":[[160,410],[430,325],[550,265],[800,315],[920,250],[1180,310],[1300,245],[1560,305],[1680,240],[1940,305]]},
-		{"name":"Shattered Bridge", "ground":[[220,400],[600,130],[910,130],[1220,130],[1530,130],[1840,130],[2200,280]], "platforms":[[410,375,80],[500,320,72],[710,370,72],[810,315,72],[1020,370,72],[1120,310,72],[1330,365,72],[1430,305,72],[1640,360,72],[1740,300,72],[1950,355,80],[2050,295,76]], "spikes":[[300,4],[600,3],[910,3],[1220,3],[1530,3],[1840,3]], "crystals":[[150,410],[410,330],[500,275],[710,325],[810,270],[1020,325],[1120,265],[1330,320],[1430,260],[1640,315],[1740,255],[1950,310]]},
-		{"name":"The Last Canopy", "ground":[[220,390],[590,130],[900,130],[1210,130],[1520,130],[1830,130],[2180,260],[2580,300]], "platforms":[[400,380,76],[490,325,70],[690,370,70],[780,310,70],[1000,360,70],[1090,300,70],[1310,355,70],[1400,295,70],[1620,350,70],[1710,290,70],[1930,350,76],[2020,285,70],[2320,345,90],[2440,290,80]], "spikes":[[300,4],[590,3],[900,3],[1210,3],[1520,3],[1830,3],[2180,3]], "crystals":[[150,410],[400,335],[490,280],[690,325],[780,265],[1000,315],[1090,255],[1310,310],[1400,250],[1620,305],[1710,245],[1930,305],[2020,240],[2320,300]]}
-	]
-	var data: Dictionary = layouts[selected_level]
-	var ground: Array = data["ground"]
-	var elevated: Array = data["platforms"]
-	var spike_data: Array = data["spikes"]
-	var crystal_data: Array = data["crystals"]
-	level_end = float(ground[-1][0]) + float(ground[-1][1]) * 0.5 + 100.0
+	# Hardcore routes are generated from a reachability budget, not arbitrary gaps.
+	# Player physics: jump speed 445 px/s, gravity 1200 px/s^2, run speed 245 px/s.
+	var ground: Array = [[220, 440]]
+	var target_end := 2400.0 + float(selected_level) * 120.0
+	var ground_x := 820.0
+	while ground_x < target_end - 600.0:
+		ground.append([ground_x, 220.0])
+		ground_x += 600.0
+	var final_ground_x := target_end - 230.0
+	ground.append([final_ground_x, 300.0])
+
+	# Difficulty rises through narrower ledges, slightly longer gaps, and more
+	# dangerous ground recovery zones. Vertical changes stay inside the jump envelope.
+	var route_width := maxf(60.0, 84.0 - float(selected_level) * 2.5)
+	var route_spacing := 148.0 + float(selected_level) * 1.6
+	var elevated: Array = []
+	var crystal_data: Array = []
+	var route_x := 500.0
+	var route_index := 0
+	while route_x < final_ground_x - 105.0:
+		var pattern := [374.0, 336.0, 380.0, 342.0, 378.0, 340.0, 382.0, 346.0]
+		var y: float = pattern[route_index % pattern.size()]
+		# Later stages vary the rhythm without introducing unreachable height spikes.
+		if selected_level >= 5 and route_index % 4 == 2:
+			y -= 5.0
+		if selected_level >= 8 and route_index % 5 == 4:
+			y += 4.0
+		elevated.append([route_x, y, route_width])
+		crystal_data.append([route_x, y - 42.0])
+		route_x += route_spacing
+		route_index += 1
+
+	var spike_data: Array = []
+	for ground_index in range(1, ground.size() - 1):
+		var ground_piece: Array = ground[ground_index]
+		var spike_count := mini(5, 3 + int(selected_level / 3))
+		spike_data.append([ground_piece[0], spike_count])
+	# First crystal gives a safe target; optional crystals above narrow ledges reward precision.
+	crystal_data.push_front([170.0, 410.0])
+	var data := {"ground": ground, "platforms": elevated, "spikes": spike_data, "crystals": crystal_data}
+	var spike_count_total := spike_data.size()
 	crystal_total = crystal_data.size()
+	level_end = final_ground_x + 250.0
+	_validate_jump_route(elevated, ground)
 	for piece in ground:
 		_add_platform(Vector2(piece[0], FLOOR_Y), Vector2(piece[1], 144))
 	for piece in elevated:
@@ -285,6 +309,42 @@ func _build_level() -> void:
 	for p in crystal_data:
 		_add_crystal(Vector2(p[0], p[1]))
 	_add_goal(Vector2(float(ground[-1][0]) + float(ground[-1][1]) * 0.5 - 45.0, 405))
+
+
+func _max_jump_horizontal_distance(source_top: float, target_top: float) -> float:
+	# Solve dy = -445*t + 0.5*1200*t^2 for the descending crossing.
+	var vertical_delta := target_top - source_top
+	var discriminant := 445.0 * 445.0 + 2.0 * 1200.0 * vertical_delta
+	if discriminant < 0.0:
+		return 0.0
+	var landing_time := (445.0 + sqrt(discriminant)) / 1200.0
+	return 245.0 * landing_time
+
+
+func _validate_jump_route(elevated: Array, ground: Array) -> void:
+	# Conservative 24 px reserve accounts for imperfect takeoff/landing timing.
+	var source_left := float(ground[0][0]) - float(ground[0][1]) * 0.5
+	var source_right := float(ground[0][0]) + float(ground[0][1]) * 0.5
+	var source_top := FLOOR_Y - 72.0
+	var route_gaps: Array[Dictionary] = []
+	for ledge in elevated:
+		var ledge_x: float = ledge[0]
+		var ledge_top: float = ledge[1] - 9.0
+		var ledge_width: float = ledge[2]
+		var gap := maxf(0.0, ledge_x - ledge_width * 0.5 - source_right)
+		var available := _max_jump_horizontal_distance(source_top, ledge_top) - 24.0
+		route_gaps.append({"gap": gap, "available": available, "from": source_right, "to": ledge_x - ledge_width * 0.5})
+		if gap > available:
+			push_warning("FastWOken level %02d: jump to ledge at x=%.0f needs %.1f px but conservative reach is %.1f px." % [selected_level + 1, ledge_x, gap, available])
+		source_left = ledge_x - ledge_width * 0.5
+		source_right = ledge_x + ledge_width * 0.5
+		source_top = ledge_top
+	var final_piece: Array = ground[ground.size() - 1]
+	var final_left := float(final_piece[0]) - float(final_piece[1]) * 0.5
+	var final_gap := maxf(0.0, final_left - source_right)
+	var final_available := _max_jump_horizontal_distance(source_top, FLOOR_Y - 72.0) - 24.0
+	if final_gap > final_available:
+		push_warning("FastWOken level %02d: final jump needs %.1f px but conservative reach is %.1f px." % [selected_level + 1, final_gap, final_available])
 
 func _add_platform(center: Vector2, size: Vector2) -> void:
 	var body := StaticBody2D.new()
