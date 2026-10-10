@@ -58,6 +58,9 @@ jobs:
 
       - name: Import project resources
         run: godot --headless --editor --path . --quit
+ 
+      - name: Validate all level routes and crystal placements
+        run: godot --headless --path . --script res://tests/validate_levels.gd
 
       - name: Export Windows executable
         run: |
