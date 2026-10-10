@@ -1,7 +1,9 @@
 extends Node2D
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
-const LEVEL_END := 2240.0
+var level_end := 2240.0
+var selected_level := 0
+var crystal_total := 8
 const FLOOR_Y := 468.0
 
 var player: CharacterBody2D
@@ -21,7 +23,7 @@ var applied_touch_jump := false
 
 func _ready() -> void:
 	_setup_input()
-	_build_level()
+	_load_level(0)
 	_spawn_player()
 	_build_ui()
 	_setup_forest_audio()
@@ -110,6 +112,8 @@ func _setup_input() -> void:
 	_add_key_action("move_right", [KEY_D, KEY_RIGHT])
 	_add_key_action("jump", [KEY_SPACE, KEY_W, KEY_UP])
 	_add_key_action("restart", [KEY_R])
+	_add_key_action("level_next", [KEY_BRACKETRIGHT, KEY_PAGEUP])
+	_add_key_action("level_previous", [KEY_BRACKETLEFT, KEY_PAGEDOWN])
 
 func _add_key_action(action_name: String, keys: Array) -> void:
 	if not InputMap.has_action(action_name):
@@ -120,30 +124,59 @@ func _add_key_action(action_name: String, keys: Array) -> void:
 		if not InputMap.action_has_event(action_name, event):
 			InputMap.action_add_event(action_name, event)
 
+func _load_level(index: int) -> void:
+	selected_level = posmod(index, 10)
+	for node in get_tree().get_nodes_in_group("level_objects"):
+		node.queue_free()
+	for node in get_tree().get_nodes_in_group("platforms"):
+		node.remove_from_group("platforms")
+	level_end = 2400.0 + selected_level * 120.0
+	score = 0
+	won = false
+	crystal_total = 8
+	_build_level()
+	if is_instance_valid(player):
+		player.global_position = Vector2(80, 350)
+		player.velocity = Vector2.ZERO
+		player.spawn_position = player.global_position
+		player.controls_locked = false
+	if is_instance_valid(camera):
+		camera.limit_right = int(level_end)
+	if is_instance_valid(message_label):
+		message_label.text = "LEVEL %02d / 10   —   [ ] to change level" % (selected_level + 1)
+	_update_hud()
+	queue_redraw()
+
 func _build_level() -> void:
-	# Continuous ground is broken into chunks so the pits matter.
-	_add_platform(Vector2(240, FLOOR_Y), Vector2(480, 144))
-	_add_platform(Vector2(760, FLOOR_Y), Vector2(260, 144))
-	_add_platform(Vector2(1130, FLOOR_Y), Vector2(300, 144))
-	_add_platform(Vector2(1560, FLOOR_Y), Vector2(300, 144))
-	_add_platform(Vector2(2040, FLOOR_Y), Vector2(400, 144))
-
-	_add_platform(Vector2(520, 365), Vector2(112, 18))
-	_add_platform(Vector2(900, 315), Vector2(112, 18))
-	_add_platform(Vector2(1280, 365), Vector2(112, 18))
-	_add_platform(Vector2(1690, 300), Vector2(120, 18))
-	_add_platform(Vector2(1900, 355), Vector2(100, 18))
-
-	_add_spikes(Vector2(340, 396), 4)
-	_add_spikes(Vector2(760, 396), 3)
-	_add_spikes(Vector2(1130, 396), 4)
-	_add_spikes(Vector2(1560, 396), 4)
-	_add_spikes(Vector2(2010, 396), 3)
-
-	for p in [Vector2(190, 410), Vector2(520, 320), Vector2(760, 410), Vector2(900, 270), Vector2(1280, 320), Vector2(1690, 255), Vector2(1900, 310), Vector2(2160, 410)]:
-		_add_crystal(p)
-
-	_add_goal(Vector2(2200, 405))
+	# Each level has a hand-authored platform route and hazard rhythm.
+	var layouts := [
+		{"name":"Forest Entry", "ground":[[240,480],[760,260],[1130,300],[1560,300],[2040,400],[2440,280]], "platforms":[[520,365,112],[900,315,112],[1280,365,112],[1690,300,120],[1900,355,100],[2290,315,120]], "spikes":[[340,4],[760,3],[1130,4],[1560,4],[2010,3]], "crystals":[[190,410],[520,320],[760,410],[900,270],[1280,320],[1690,255],[1900,310],[2160,410]]},
+		{"name":"Broken Canopy", "ground":[[220,440],[690,180],[1050,180],[1440,210],[1850,200],[2280,360]], "platforms":[[450,380,90],[590,330,86],[850,370,88],[1000,300,82],[1250,350,90],[1390,285,80],[1640,340,90],[1790,285,84],[2100,350,100]], "spikes":[[310,4],[690,3],[1050,3],[1440,3],[1850,3]], "crystals":[[170,410],[450,335],[590,285],[850,325],[1000,255],[1250,305],[1390,240],[1640,295],[1790,240],[2100,305]]},
+		{"name":"Root Maze", "ground":[[210,420],[650,170],[1010,180],[1420,180],[1810,180],[2220,300]], "platforms":[[420,370,88],[520,310,80],[800,350,82],[900,285,82],[1170,355,84],[1280,300,82],[1580,350,86],[1690,285,82],[1980,350,90],[2090,295,82]], "spikes":[[290,4],[650,3],[1010,3],[1420,3],[1810,3]], "crystals":[[160,410],[420,325],[520,265],[800,305],[900,240],[1170,310],[1280,255],[1580,305],[1690,240],[1980,305]]},
+		{"name":"Mossy Cliffs", "ground":[[220,440],[690,160],[1070,160],[1450,160],[1830,160],[2250,340]], "platforms":[[440,390,100],[570,335,90],[820,390,90],[950,325,90],[1200,370,90],[1330,300,86],[1580,365,90],[1710,295,90],[1980,360,90],[2110,300,86]], "spikes":[[300,4],[690,3],[1070,3],[1450,3],[1830,3]], "crystals":[[180,410],[440,345],[570,290],[820,345],[950,280],[1200,325],[1330,255],[1580,320],[1710,250],[1980,315]]},
+		{"name":"Flooded Hollow", "ground":[[220,420],[650,180],[1030,180],[1410,180],[1790,180],[2200,320]], "platforms":[[440,360,100],[560,300,86],[820,345,88],[940,280,82],[1200,350,88],[1320,285,84],[1580,340,90],[1700,275,84],[1970,340,90],[2090,285,84]], "spikes":[[300,3],[650,3],[1030,3],[1410,3],[1790,3]], "crystals":[[160,410],[440,315],[560,260],[820,300],[940,240],[1200,305],[1320,245],[1580,295],[1700,235],[1970,295]]},
+		{"name":"Thorn Run", "ground":[[230,450],[700,170],[1080,160],[1460,170],[1840,170],[2290,380]], "platforms":[[480,365,90],[590,305,82],[860,355,82],[970,290,80],[1240,350,82],[1350,285,80],[1620,345,84],[1730,280,82],[2050,350,90],[2170,290,82]], "spikes":[[310,5],[700,4],[1080,4],[1460,4],[1840,4]], "crystals":[[170,410],[480,320],[590,265],[860,310],[970,245],[1240,305],[1350,240],[1620,300],[1730,235],[2050,305]]},
+		{"name":"Ravine Steps", "ground":[[220,420],[660,160],[1050,160],[1440,160],[1830,160],[2250,340]], "platforms":[[420,390,90],[530,340,80],[640,290,78],[820,370,82],[930,320,78],[1040,270,78],[1210,365,82],[1320,315,78],[1430,265,78],[1600,365,82],[1710,315,78],[1820,265,78],[2010,355,84],[2120,300,80]], "spikes":[[300,4],[660,3],[1050,3],[1440,3],[1830,3]], "crystals":[[160,410],[420,345],[640,245],[820,325],[1040,225],[1210,320],[1430,220],[1600,320],[1820,220],[2010,310]]},
+		{"name":"Nightwood", "ground":[[220,420],[660,170],[1030,170],[1410,170],[1790,170],[2210,320]], "platforms":[[430,370,90],[550,310,82],[800,360,84],[920,295,80],[1180,355,84],[1300,290,80],[1560,350,84],[1680,285,80],[1940,350,86],[2060,290,82]], "spikes":[[300,4],[660,3],[1030,3],[1410,3],[1790,3]], "crystals":[[160,410],[430,325],[550,265],[800,315],[920,250],[1180,310],[1300,245],[1560,305],[1680,240],[1940,305]]},
+		{"name":"Shattered Bridge", "ground":[[220,400],[600,130],[910,130],[1220,130],[1530,130],[1840,130],[2200,280]], "platforms":[[410,375,80],[500,320,72],[710,370,72],[810,315,72],[1020,370,72],[1120,310,72],[1330,365,72],[1430,305,72],[1640,360,72],[1740,300,72],[1950,355,80],[2050,295,76]], "spikes":[[300,4],[600,3],[910,3],[1220,3],[1530,3],[1840,3]], "crystals":[[150,410],[410,330],[500,275],[710,325],[810,270],[1020,325],[1120,265],[1330,320],[1430,260],[1640,315],[1740,255],[1950,310]]},
+		{"name":"The Last Canopy", "ground":[[220,390],[590,130],[900,130],[1210,130],[1520,130],[1830,130],[2180,260],[2580,300]], "platforms":[[400,380,76],[490,325,70],[690,370,70],[780,310,70],[1000,360,70],[1090,300,70],[1310,355,70],[1400,295,70],[1620,350,70],[1710,290,70],[1930,350,76],[2020,285,70],[2320,345,90],[2440,290,80]], "spikes":[[300,4],[590,3],[900,3],[1210,3],[1520,3],[1830,3],[2180,3]], "crystals":[[150,410],[400,335],[490,280],[690,325],[780,265],[1000,315],[1090,255],[1310,310],[1400,250],[1620,305],[1710,245],[1930,305],[2020,240],[2320,300]]}
+	]
+	var data: Dictionary = layouts[selected_level]
+	var ground: Array = data["ground"]
+	var elevated: Array = data["platforms"]
+	var spike_data: Array = data["spikes"]
+	var crystal_data: Array = data["crystals"]
+	level_end = float(ground[-1][0]) + float(ground[-1][1]) * 0.5 + 100.0
+	crystal_total = crystal_data.size()
+	for piece in ground:
+		_add_platform(Vector2(piece[0], FLOOR_Y), Vector2(piece[1], 144))
+	for piece in elevated:
+		_add_platform(Vector2(piece[0], piece[1]), Vector2(piece[2], 18))
+	for spike in spike_data:
+		_add_spikes(Vector2(spike[0], 396), int(spike[1]))
+	for p in crystal_data:
+		_add_crystal(Vector2(p[0], p[1]))
+	_add_goal(Vector2(level_end - 45.0, 405))
 
 func _add_platform(center: Vector2, size: Vector2) -> void:
 	var body := StaticBody2D.new()
@@ -157,6 +190,7 @@ func _add_platform(center: Vector2, size: Vector2) -> void:
 	body.add_child(shape)
 	add_child(body)
 	body.add_to_group("platforms")
+	body.add_to_group("level_objects")
 
 func _add_spikes(center: Vector2, count: int) -> void:
 	var hazard := Area2D.new()
@@ -164,6 +198,7 @@ func _add_spikes(center: Vector2, count: int) -> void:
 	hazard.collision_layer = 0
 	hazard.collision_mask = 1
 	hazard.set_meta("kind", "spike")
+	hazard.add_to_group("level_objects")
 	var collision := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(count * 18.0, 20)
@@ -180,6 +215,7 @@ func _add_crystal(at: Vector2) -> void:
 	crystal.collision_layer = 0
 	crystal.collision_mask = 1
 	crystal.set_meta("kind", "crystal")
+	crystal.add_to_group("level_objects")
 	var collision := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
 	circle.radius = 12
@@ -194,6 +230,7 @@ func _add_goal(at: Vector2) -> void:
 	goal.collision_layer = 0
 	goal.collision_mask = 1
 	goal.set_meta("kind", "goal")
+	goal.add_to_group("level_objects")
 	var collision := CollisionShape2D.new()
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(30, 72)
@@ -211,7 +248,7 @@ func _spawn_player() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 7.0
 	camera.limit_left = 0
-	camera.limit_right = int(LEVEL_END)
+	camera.limit_right = int(level_end)
 	camera.limit_top = 0
 	camera.limit_bottom = 540
 	player.add_child(camera)
@@ -311,6 +348,10 @@ func _process(_delta: float) -> void:
 		_respawn()
 	if Input.is_action_just_pressed("restart"):
 		_respawn()
+	if Input.is_action_just_pressed("level_next"):
+		_load_level(selected_level + 1)
+	if Input.is_action_just_pressed("level_previous"):
+		_load_level(selected_level - 1)
 	queue_redraw()
 
 func _on_hazard_entered(body: Node2D) -> void:
@@ -329,7 +370,7 @@ func _on_goal_reached(body: Node2D) -> void:
 		return
 	won = true
 	player.controls_locked = true
-	message_label.text = "LEVEL CLEAR!  Crystals: %d  —  Press R to replay" % score
+	message_label.text = "LEVEL %02d CLEAR!  Crystals: %d/%d  —  Press ] for next" % [selected_level + 1, score, crystal_total]
 
 func _respawn() -> void:
 	if won:
@@ -350,12 +391,12 @@ func _respawn() -> void:
 
 func _update_hud() -> void:
 	if is_instance_valid(score_label):
-		score_label.text = "◆ %d / 8" % score
+		score_label.text = "LEVEL %02d/10   ◆ %d/%d" % [selected_level + 1, score, crystal_total]
 
 func _draw() -> void:
 	# A realistic-feeling forest painted from layered shapes and texture details.
 	# The player remains pixel-art, creating the intended visual contrast.
-	draw_rect(Rect2(0, 0, LEVEL_END, 540), Color("#a7bdc1"))
+	draw_rect(Rect2(0, 0, level_end, 540), Color("#a7bdc1"))
 	# Overcast sky, with a warm break near the horizon.
 	for band in range(18):
 		var t := float(band) / 18.0
