@@ -176,7 +176,7 @@ func _build_level() -> void:
 		_add_spikes(Vector2(spike[0], 396), int(spike[1]))
 	for p in crystal_data:
 		_add_crystal(Vector2(p[0], p[1]))
-	_add_goal(Vector2(level_end - 45.0, 405))
+	_add_goal(Vector2(float(ground[-1][0]) + float(ground[-1][1]) * 0.5 - 45.0, 405))
 
 func _add_platform(center: Vector2, size: Vector2) -> void:
 	var body := StaticBody2D.new()
