@@ -91,52 +91,71 @@ func _save_progress() -> void:
 
 
 func _play_sfx(kind: String) -> void:
-	# Soft synthesized one-shots: rounded attacks, smooth pitch curves and no harsh clipping.
+	# Procedural Foley-inspired sounds: soft filtered noise plus quiet, imperfect partials.
 	const SAMPLE_RATE := 22050
-	var duration := 0.18
+	var duration := 0.20
 	match kind:
-		"jump": duration = 0.19
-		"land": duration = 0.14
-		"crystal": duration = 0.42
-		"portal": duration = 0.68
-		_: duration = 0.18
+		"jump": duration = 0.24
+		"land": duration = 0.18
+		"crystal": duration = 0.62
+		"portal": duration = 0.86
+		_: duration = 0.20
 	var sample_count := int(SAMPLE_RATE * duration)
 	var pcm := PackedByteArray()
 	pcm.resize(sample_count * 2)
 	var phase := 0.0
 	var phase_two := 0.0
+	var phase_three := 0.0
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 7801 if kind == "land" else 1907
+	rng.randomize()
 	var low_noise := 0.0
+	var high_noise := 0.0
+	var base_pitch := rng.randf_range(0.94, 1.06)
 	for i in range(sample_count):
 		var t := float(i) / SAMPLE_RATE
 		var progress := t / duration
-		var attack := minf(1.0, t / (0.012 if kind != "land" else 0.004))
-		var release := pow(maxf(0.0, 1.0 - progress), 1.8)
+		var attack_time := 0.018
+		if kind == "land":
+			attack_time = 0.003
+		var attack := minf(1.0, t / attack_time)
+		var release := pow(maxf(0.0, 1.0 - progress), 2.0)
 		var envelope := attack * release
+		var white_noise := rng.randf_range(-1.0, 1.0)
+		low_noise = lerpf(low_noise, white_noise, 0.045)
+		high_noise = lerpf(high_noise, white_noise - low_noise, 0.18)
 		var sample := 0.0
 		if kind == "jump":
-			var frequency := lerpf(300.0, 470.0, progress)
+			var frequency := lerpf(235.0, 355.0, progress) * base_pitch
 			phase += TAU * frequency / SAMPLE_RATE
-			sample = (sin(phase) * 0.72 + sin(phase * 2.0) * 0.09) * envelope * 0.22
+			phase_two += TAU * (frequency * 1.49) / SAMPLE_RATE
+			var whoosh := low_noise * 0.30 + high_noise * 0.12
+			sample = (sin(phase) * 0.30 + sin(phase_two) * 0.08 + whoosh) * envelope * 0.20
 		elif kind == "land":
-			var frequency := lerpf(105.0, 62.0, progress)
+			var frequency := lerpf(88.0, 48.0, progress) * base_pitch
 			phase += TAU * frequency / SAMPLE_RATE
-			low_noise = lerpf(low_noise, rng.randf_range(-1.0, 1.0), 0.12)
-			sample = (sin(phase) * 0.58 + low_noise * 0.12) * envelope * 0.28
+			var soft_thud := low_noise * 0.30 + high_noise * 0.09
+			var impact_envelope := exp(-t * 23.0)
+			sample = (sin(phase) * 0.40 * impact_envelope + soft_thud * impact_envelope) * envelope * 0.32
 		elif kind == "crystal":
-			var f1 := 740.0 if progress < 0.42 else 988.0
-			var f2 := 1110.0 if progress < 0.42 else 1480.0
+			var f1 := 660.0 * base_pitch
+			var f2 := 990.0 * base_pitch * rng.randf_range(0.998, 1.002)
+			var f3 := 1328.0 * base_pitch
 			phase += TAU * f1 / SAMPLE_RATE
 			phase_two += TAU * f2 / SAMPLE_RATE
-			var note_fade := 0.72 + 0.28 * sin(PI * progress)
-			sample = (sin(phase) * 0.62 + sin(phase_two) * 0.20) * envelope * note_fade * 0.20
+			phase_three += TAU * f3 / SAMPLE_RATE
+			var decay_one := exp(-t * 5.4)
+			var decay_two := exp(-t * 7.8)
+			var decay_three := exp(-t * 10.5)
+			sample = (sin(phase) * decay_one * 0.42 + sin(phase_two) * decay_two * 0.19 + sin(phase_three) * decay_three * 0.07) * attack * 0.22
+			sample += high_noise * exp(-t * 36.0) * 0.018
 		else:
-			var frequency := lerpf(260.0, 520.0, progress)
+			var frequency := lerpf(185.0, 370.0, progress) * base_pitch
 			phase += TAU * frequency / SAMPLE_RATE
 			phase_two += TAU * (frequency * 1.503) / SAMPLE_RATE
-			sample = (sin(phase) * 0.52 + sin(phase_two) * 0.16) * envelope * 0.18
-		var signed_sample := int(clampf(sample, -0.8, 0.8) * 32767.0)
+			phase_three += TAU * (frequency * 2.01) / SAMPLE_RATE
+			var shimmer := sin(phase) * 0.30 + sin(phase_two) * 0.10 + sin(phase_three) * 0.035
+			sample = shimmer * envelope * 0.18 + low_noise * envelope * 0.035
+		var signed_sample := int(clampf(sample, -0.7, 0.7) * 32767.0)
 		if signed_sample < 0:
 			signed_sample += 65536
 		pcm[i * 2] = signed_sample & 0xff
@@ -149,18 +168,18 @@ func _play_sfx(kind: String) -> void:
 	var audio_player := AudioStreamPlayer.new()
 	audio_player.name = "SFX_" + kind
 	audio_player.stream = stream
-	audio_player.volume_db = -12.0 if kind == "land" else (-10.0 if kind == "portal" else -9.0)
+	audio_player.volume_db = -14.0 if kind == "land" else (-11.0 if kind == "portal" else -10.0)
 	add_child(audio_player)
 	audio_player.finished.connect(audio_player.queue_free)
 	audio_player.play()
 
 
 func _setup_forest_audio() -> void:
-	# Quiet, slow-moving ambience sits behind gameplay instead of competing with effects.
+	# Quiet stereo-like depth is suggested through overlapping noise bands and soft birdsong.
 	var wind_player := AudioStreamPlayer.new()
 	wind_player.name = "ForestAmbience"
 	wind_player.stream = _make_forest_audio(false)
-	wind_player.volume_db = -24.0
+	wind_player.volume_db = -25.0
 	wind_player.bus = "Master"
 	add_child(wind_player)
 	wind_player.play()
@@ -168,7 +187,7 @@ func _setup_forest_audio() -> void:
 	var birds_player := AudioStreamPlayer.new()
 	birds_player.name = "ForestBirds"
 	birds_player.stream = _make_forest_audio(true)
-	birds_player.volume_db = -27.0
+	birds_player.volume_db = -29.0
 	birds_player.bus = "Master"
 	add_child(birds_player)
 	birds_player.play()
@@ -183,14 +202,15 @@ func _make_forest_audio(birds_only: bool) -> AudioStreamWAV:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 44021 if birds_only else 91273
 	var smooth_wind := 0.0
-	var slower_wind := 0.0
+	var slow_wind := 0.0
+	var leaf_noise := 0.0
 	var chirps := [
-		{"start": 0.72, "length": 0.28, "frequency": 1850.0},
-		{"start": 1.12, "length": 0.22, "frequency": 2230.0},
-		{"start": 2.85, "length": 0.42, "frequency": 1650.0},
-		{"start": 4.76, "length": 0.24, "frequency": 2450.0},
-		{"start": 5.10, "length": 0.31, "frequency": 2050.0},
-		{"start": 6.65, "length": 0.38, "frequency": 1780.0}
+		{"start": 0.62, "length": 0.31, "frequency": 1740.0, "bend": 280.0},
+		{"start": 1.05, "length": 0.24, "frequency": 2110.0, "bend": -190.0},
+		{"start": 2.68, "length": 0.47, "frequency": 1580.0, "bend": 360.0},
+		{"start": 4.58, "length": 0.27, "frequency": 2320.0, "bend": -240.0},
+		{"start": 4.98, "length": 0.34, "frequency": 1980.0, "bend": 310.0},
+		{"start": 6.46, "length": 0.41, "frequency": 1690.0, "bend": -210.0}
 	]
 	for i in range(sample_count):
 		var t := float(i) / SAMPLE_RATE
@@ -201,23 +221,28 @@ func _make_forest_audio(birds_only: bool) -> AudioStreamWAV:
 				var chirp_length: float = float(chirp["length"])
 				if local_t >= 0.0 and local_t < chirp_length:
 					var progress := local_t / chirp_length
-					var envelope := pow(maxf(0.0, sin(PI * progress)), 1.35)
-					var frequency: float = float(chirp["frequency"]) + 330.0 * sin(progress * PI)
-					var chirp_phase := TAU * (float(chirp["frequency"]) * local_t + 330.0 * chirp_length * (1.0 - cos(PI * progress)) / (2.0 * PI))
-					sample += (sin(chirp_phase) * 0.7 + sin(chirp_phase * 2.01) * 0.12) * envelope * 0.10
+					var envelope := pow(maxf(0.0, sin(PI * progress)), 1.5)
+					var start_frequency: float = float(chirp["frequency"])
+					var bend: float = float(chirp["bend"])
+					var frequency := (start_frequency + bend * sin(PI * progress)) * (1.0 + 0.006 * sin(TAU * 7.0 * local_t))
+					var chirp_phase := TAU * (start_frequency * local_t + bend * chirp_length * (1.0 - cos(PI * progress)) / (2.0 * PI))
+					var tremolo := 0.82 + 0.18 * sin(TAU * 19.0 * local_t)
+					sample += (sin(chirp_phase) * 0.72 + sin(chirp_phase * 2.015) * 0.09) * envelope * tremolo * 0.075
 		else:
-			# Two smoothed noise bands create a distant breeze and soft leaf movement.
-			smooth_wind = lerpf(smooth_wind, rng.randf_range(-1.0, 1.0), 0.012)
-			slower_wind = lerpf(slower_wind, rng.randf_range(-1.0, 1.0), 0.0025)
-			var gust := 0.66 + 0.20 * sin(TAU * t / 6.7) + 0.08 * sin(TAU * t / 3.1)
-			var leaf_rustle := rng.randf_range(-1.0, 1.0)
-			sample = (slower_wind * 0.25 + smooth_wind * 0.30 + leaf_rustle * 0.035) * gust
-			sample += sin(TAU * 72.0 * t) * 0.008
-		# Matching quiet loop edges prevent a hard discontinuity on repeat.
-		var fade_samples := int(SAMPLE_RATE * 0.045)
+			# Slow, filtered noise models distant wind; a brighter band adds irregular leaf rustle.
+			var white_noise := rng.randf_range(-1.0, 1.0)
+			smooth_wind = lerpf(smooth_wind, white_noise, 0.009)
+			slow_wind = lerpf(slow_wind, white_noise, 0.0016)
+			leaf_noise = lerpf(leaf_noise, rng.randf_range(-1.0, 1.0), 0.075)
+			var gust := 0.70 + 0.16 * sin(TAU * t / 7.1) + 0.07 * sin(TAU * t / 3.7)
+			var rustle := leaf_noise * (0.35 + 0.65 * maxf(0.0, sin(TAU * t / 2.9)))
+			sample = (slow_wind * 0.38 + smooth_wind * 0.28 + rustle * 0.045) * gust
+			sample += sin(TAU * 64.0 * t) * 0.004
+		# Fade both ends to keep the loop transition quiet rather than clicking.
+		var fade_samples := int(SAMPLE_RATE * 0.055)
 		var fade := minf(1.0, minf(float(i) / fade_samples, float(sample_count - 1 - i) / fade_samples))
 		sample *= maxf(0.0, fade)
-		var signed_sample := int(clampf(sample, -0.65, 0.65) * 32767.0)
+		var signed_sample := int(clampf(sample, -0.55, 0.55) * 32767.0)
 		if signed_sample < 0:
 			signed_sample += 65536
 		pcm[i * 2] = signed_sample & 0xff
