@@ -16,6 +16,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Download and prepare CC0 forest photo assets
+        shell: bash
+        run: |
+          mkdir -p assets
+          if [ ! -f assets/forest_slope.jpg ] || [ ! -f assets/forest_leaves_02.jpg ]; then
+            curl -L --fail --retry 3 "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/forest_slope.jpg" -o /tmp/forest_slope_source.jpg
+            curl -L --fail --retry 3 "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/forest_leaves_02/forest_leaves_02_diffuse_4k.jpg" -o /tmp/forest_leaves_source.jpg
+            python -m pip install --quiet pillow
+            python - <<'PY'
+          from PIL import Image
+          Image.open("/tmp/forest_slope_source.jpg").convert("RGB").resize((2048, 1024), Image.Resampling.LANCZOS).save("assets/forest_slope.jpg", "JPEG", quality=88, optimize=True)
+          Image.open("/tmp/forest_leaves_source.jpg").convert("RGB").resize((1024, 1024), Image.Resampling.LANCZOS).save("assets/forest_leaves_02.jpg", "JPEG", quality=88, optimize=True)
+          PY
+          fi
+          test -s assets/forest_slope.jpg
+          test -s assets/forest_leaves_02.jpg
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
