@@ -282,6 +282,9 @@ func _load_level(index: int) -> void:
 	for node in get_tree().get_nodes_in_group("platforms"):
 		node.remove_from_group("platforms")
 	level_end = 2400.0 + selected_level * 120.0
+	if is_instance_valid(forest_background):
+		var forest_tints := [Color("#dce8dc"), Color("#c8dfd5"), Color("#cbd9bd"), Color("#b9d4c8"), Color("#a9c8b8"), Color("#a9bfa7"), Color("#8da99f"), Color("#8295a5"), Color("#7c8c9d"), Color("#a9a4bc")]
+		forest_background.modulate = forest_tints[selected_level]
 	score = 0
 	won = false
 	crystal_total = 8
@@ -312,22 +315,35 @@ func _build_level() -> void:
 
 	# Difficulty rises through narrower ledges, slightly longer gaps, and more
 	# dangerous ground recovery zones. Vertical changes stay inside the jump envelope.
-	var route_width := maxf(60.0, 84.0 - float(selected_level) * 2.5)
-	var route_spacing := 148.0 + float(selected_level) * 1.6
+	var route_width := maxf(58.0, 92.0 - float(selected_level) * 3.2)
+	var route_spacing := 136.0 + float(selected_level) * 2.6
 	var elevated: Array = []
 	var crystal_data: Array = []
 	var route_x := 500.0
 	var route_index := 0
 	while route_x < final_ground_x - 105.0:
-		var pattern := [374.0, 336.0, 380.0, 342.0, 378.0, 340.0, 382.0, 346.0]
+		var patterns := [
+			[374.0, 336.0, 380.0, 342.0, 378.0, 340.0],
+			[374.0, 350.0, 326.0, 368.0, 332.0, 358.0],
+			[374.0, 330.0, 366.0, 322.0, 372.0, 334.0],
+			[374.0, 350.0, 318.0, 360.0, 324.0, 372.0],
+			[374.0, 326.0, 360.0, 316.0, 354.0, 330.0],
+			[374.0, 346.0, 314.0, 354.0, 320.0, 366.0],
+			[374.0, 318.0, 354.0, 310.0, 366.0, 326.0],
+			[374.0, 340.0, 306.0, 352.0, 312.0, 362.0],
+			[374.0, 312.0, 346.0, 302.0, 356.0, 318.0],
+			[374.0, 306.0, 350.0, 298.0, 342.0, 310.0]
+		]
+		var pattern: Array = patterns[selected_level]
 		var y: float = pattern[route_index % pattern.size()]
-		# Later stages vary the rhythm without introducing unreachable height spikes.
-		if selected_level >= 5 and route_index % 4 == 2:
-			y -= 5.0
-		if selected_level >= 8 and route_index % 5 == 4:
-			y += 4.0
+		# Offset every second platform on later stages for a visibly different route rhythm.
+		if selected_level >= 4 and route_index % 3 == 1:
+			y += 8.0
+		if selected_level >= 7 and route_index % 4 == 3:
+			y -= 6.0
 		elevated.append([route_x, y, route_width])
-		crystal_data.append([route_x, y - 42.0])
+		# Put each crystal just above the standing position, inside easy pickup range.
+		crystal_data.append([route_x, y - 28.0])
 		route_x += route_spacing
 		route_index += 1
 
@@ -337,7 +353,8 @@ func _build_level() -> void:
 		var spike_count := mini(5, 3 + int(selected_level / 3))
 		spike_data.append([ground_piece[0], spike_count])
 	# First crystal gives a safe target; optional crystals above narrow ledges reward precision.
-	crystal_data.push_front([170.0, 410.0])
+	# First crystal sits safely above the starting ground, not buried inside the soil.
+	crystal_data.push_front([170.0, 365.0])
 	var data := {"ground": ground, "platforms": elevated, "spikes": spike_data, "crystals": crystal_data}
 	var spike_count_total := spike_data.size()
 	crystal_total = crystal_data.size()
@@ -429,7 +446,7 @@ func _add_crystal(at: Vector2) -> void:
 	crystal.add_to_group("level_objects")
 	var collision := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 12
+	circle.radius = 19
 	collision.shape = circle
 	crystal.add_child(collision)
 	crystal.body_entered.connect(_on_crystal_collected.bind(crystal))
@@ -616,14 +633,14 @@ func _show_main_menu() -> void:
 	panel.add_child(content)
 
 	var title := Label.new()
-	title.text = "FastWOken"
+	title.text = "FASTWOken"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 38)
+	title.add_theme_font_size_override("font_size", 42)
 	title.add_theme_color_override("font_color", Color("#8fffe3"))
 	content.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "FOREST TRIALS  •  SELECT YOUR LEVEL"
+	subtitle.text = "THE FOREST TRIALS  •  10 UNIQUE ROUTES  •  HARDCORE"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 15)
 	subtitle.add_theme_color_override("font_color", Color("#c0d6c9"))
@@ -651,13 +668,15 @@ func _show_main_menu() -> void:
 		elif best_crystals.has(str(i)):
 			level_button.text += "  [CLEAR]"
 		level_button.modulate.a = 0.0
-		level_button.custom_minimum_size = Vector2(275, 48)
+		level_button.custom_minimum_size = Vector2(275, 50)
 		level_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		level_button.add_theme_font_size_override("font_size", 17)
 		level_button.add_theme_color_override("font_color", Color("#f1f7ee"))
-		level_button.add_theme_stylebox_override("normal", _panel_style(Color("#25413b")))
+		var level_colors := [Color("#25413b"), Color("#254548"), Color("#344b3c"), Color("#3b4c3d"), Color("#3c5148"), Color("#4b4935"), Color("#3a4a50"), Color("#344054"), Color("#34364b"), Color("#4a3448")]
+		level_button.add_theme_stylebox_override("normal", _panel_style(level_colors[i]))
 		level_button.add_theme_stylebox_override("hover", _panel_style(Color("#387263")))
 		level_button.add_theme_stylebox_override("pressed", _panel_style(Color("#5a9a80")))
+		level_button.add_theme_stylebox_override("disabled", _panel_style(Color("#202a29")))
 		grid.add_child(level_button)
 		level_button.pressed.connect(_transition_to_level.bind(i))
 		var button_tween := create_tween()
@@ -665,7 +684,7 @@ func _show_main_menu() -> void:
 		button_tween.tween_property(level_button, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 	var footer := Label.new()
-	footer.text = "PC: A/D or ←/→ to move • Space to jump • R to restart"
+	footer.text = "MOVE  A / D  OR  ← / →     •     JUMP  SPACE     •     RESTART  R"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 13)
 	footer.add_theme_color_override("font_color", Color("#a7bcb2"))
@@ -747,14 +766,19 @@ func _add_level_touch_button(caption: String, at: Vector2, direction: int) -> vo
 func _panel_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
-	style.corner_radius_top_left = 8
-	style.corner_radius_top_right = 8
-	style.corner_radius_bottom_left = 8
-	style.corner_radius_bottom_right = 8
+	style.border_color = Color("#79d9c8", 0.48)
+	style.set_border_width_all(1)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.24)
+	style.shadow_size = 5
+	style.shadow_offset = Vector2(0, 3)
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
 	style.content_margin_left = 14
 	style.content_margin_right = 14
 	style.content_margin_top = 8
-	style.content_margin_bottom = 8
+	style.content_margin_bottom = 10
 	return style
 
 func _add_touch_button(caption: String, at: Vector2, action: String) -> void:
@@ -992,17 +1016,21 @@ func _draw() -> void:
 				draw_line(points[0], points[1], Color("#d4cbb1"), 1.5)
 		elif kind == "crystal":
 			var p: Vector2 = child.position
-			draw_circle(p, 17, Color(0.42, 0.91, 0.88, 0.16))
+			var crystal_colors := [Color("#74ded0"), Color("#82d6ff"), Color("#a8e78c"), Color("#a6c9ff"), Color("#ffcf86"), Color("#ff9fbc"), Color("#8de0c3"), Color("#b8a6ff"), Color("#ffb4d4"), Color("#fff0a3")]
+			var crystal_color: Color = crystal_colors[selected_level]
+			draw_circle(p, 21, Color(crystal_color.r, crystal_color.g, crystal_color.b, 0.19))
 			var points := PackedVector2Array([p + Vector2(0, -12), p + Vector2(9, 0), p + Vector2(0, 12), p + Vector2(-9, 0)])
-			draw_colored_polygon(points, Color("#74ded0"))
-			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -12), p + Vector2(0, 12), p + Vector2(-9, 0)]), Color("#b4fff0"))
+			draw_colored_polygon(points, crystal_color)
+			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -12), p + Vector2(0, 12), p + Vector2(-9, 0)]), crystal_color.lightened(0.35))
 			draw_line(p + Vector2(0, -8), p + Vector2(0, 7), Color.WHITE, 2)
 		elif kind == "goal":
 			var p: Vector2 = child.position
-			draw_circle(p, 54, Color(0.42, 0.22, 0.72, 0.13))
-			draw_rect(Rect2(p.x - 18, p.y - 42, 36, 84), Color("#594c68"), false, 6)
-			draw_rect(Rect2(p.x - 13, p.y - 36, 26, 72), Color("#8b7ed0", 0.72))
-			draw_rect(Rect2(p.x - 7, p.y - 30, 14, 60), Color("#c4fff2", 0.82))
+			var portal_colors := [Color("#8b7ed0"), Color("#6ca7dc"), Color("#7ebd79"), Color("#c19a68"), Color("#5ea8a0"), Color("#bd7b8e"), Color("#7b9dca"), Color("#706bb1"), Color("#c077a5"), Color("#d5b36c")]
+			var portal_color: Color = portal_colors[selected_level]
+			draw_circle(p, 58, Color(portal_color.r, portal_color.g, portal_color.b, 0.16))
+			draw_rect(Rect2(p.x - 18, p.y - 42, 36, 84), portal_color.darkened(0.38), false, 6)
+			draw_rect(Rect2(p.x - 13, p.y - 36, 26, 72), Color(portal_color.r, portal_color.g, portal_color.b, 0.78))
+			draw_rect(Rect2(p.x - 7, p.y - 30, 14, 60), Color("#eafffb", 0.88))
 
 	# Lightweight pixel particles: earthy dust plus a mint glint in the running trail.
 	for particle in fx_particles:
