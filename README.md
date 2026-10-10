@@ -12,6 +12,8 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Procedurally synthesized bird calls on a separate, quieter audio layer
 - 10 handcrafted challenge levels with distinct platform layouts and hazard patterns
 - Main menu with a selectable two-column list of all ten levels
+- Animated menu entrance with a fade-in backdrop, sliding panel, and staggered level buttons
+- Smooth fade-to-dark transitions when switching levels
 - In-game **LEVEL SELECT** button to return to the menu at any time
 - Level selection using `[` / `]` or Page Down / Page Up; touch-device level buttons
 
@@ -27,6 +29,7 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - **]** or **Page Up**: start the next level
 - **[** or **Page Down**: start the previous level
 - **LEVEL SELECT**: open the main menu and choose any of the ten levels
+- Level selection fades smoothly between stages; menu elements animate into view
 - On touch devices, use the on-screen arrows and jump button.
 
 ## Export
