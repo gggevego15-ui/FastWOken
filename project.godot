@@ -1,0 +1,24 @@
+; Engine configuration file.
+; FastWOken - challenging pixel-art platformer
+config_version=5
+
+[application]
+config/name="FastWOken"
+run/main_scene="res://scenes/main.tscn"
+config/description="A challenging pixel-art platformer for PC and mobile."
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[display]
+window/size/viewport_width=960
+window/size/viewport_height=540
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0.035, 0.047, 0.11, 1)
