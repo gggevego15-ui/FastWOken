@@ -506,12 +506,21 @@ func _build_ui() -> void:
 	deaths_label.add_theme_font_size_override("font_size", 20)
 	row.add_child(deaths_label)
 
+	var stage_panel := PanelContainer.new()
+	stage_panel.position = Vector2(130, 62)
+	stage_panel.size = Vector2(700, 42)
+	stage_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.07, 0.075, 0.78)))
+	hud.add_child(stage_panel)
 	message_label = Label.new()
-	message_label.position = Vector2(0, 66)
-	message_label.size = Vector2(960, 40)
+	message_label.position = Vector2(130, 62)
+	message_label.size = Vector2(700, 42)
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	message_label.add_theme_color_override("font_color", Color("#ffffff"))
-	message_label.add_theme_font_size_override("font_size", 24)
+	message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	message_label.add_theme_color_override("font_color", Color("#effff9"))
+	message_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.65))
+	message_label.add_theme_constant_override("shadow_offset_x", 1)
+	message_label.add_theme_constant_override("shadow_offset_y", 2)
+	message_label.add_theme_font_size_override("font_size", 21)
 	hud.add_child(message_label)
 	_update_hud()
 
@@ -529,6 +538,10 @@ func _build_ui() -> void:
 	menu_button.add_theme_font_size_override("font_size", 15)
 	menu_button.add_theme_color_override("font_color", Color.WHITE)
 	menu_button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.92)))
+	menu_button.add_theme_stylebox_override("hover", _panel_style(Color("#326d69")))
+	menu_button.add_theme_stylebox_override("pressed", _panel_style(Color("#23534f")))
+	menu_button.add_theme_stylebox_override("focus", _panel_style(Color("#326d69")))
+	menu_button.add_theme_color_override("font_hover_color", Color("#a6ffed"))
 	hud.add_child(menu_button)
 	menu_button.pressed.connect(_show_main_menu)
 
@@ -677,7 +690,14 @@ func _show_main_menu() -> void:
 		level_button.add_theme_stylebox_override("normal", _panel_style(level_colors[i]))
 		level_button.add_theme_stylebox_override("hover", _panel_style(Color("#387263")))
 		level_button.add_theme_stylebox_override("pressed", _panel_style(Color("#5a9a80")))
+		level_button.add_theme_stylebox_override("focus", _panel_style(Color("#2d665b")))
 		level_button.add_theme_stylebox_override("disabled", _panel_style(Color("#202a29")))
+		level_button.add_theme_color_override("font_hover_color", Color("#a6ffed"))
+		level_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+		if i > unlocked_level:
+			level_button.tooltip_text = "Clear the previous stage to unlock this route."
+		else:
+			level_button.tooltip_text = "Enter %s" % names[i].substr(4)
 		grid.add_child(level_button)
 		level_button.pressed.connect(_transition_to_level.bind(i))
 		var button_tween := create_tween()
@@ -930,7 +950,42 @@ func _update_hud() -> void:
 	if is_instance_valid(score_label):
 		score_label.text = "LEVEL %02d/10   ◆ %d/%d" % [selected_level + 1, score, crystal_total]
 
+func _draw_forest_layers() -> void:
+	var center_x := player.global_position.x if is_instance_valid(player) else 480.0
+	var start_x := floori((center_x - 1100.0) / 340.0) * 340.0
+	var canopy_palette := [
+		Color("#29483d", 0.19), Color("#24494b", 0.20), Color("#3b5037", 0.20),
+		Color("#34534a", 0.21), Color("#33483b", 0.22), Color("#494b35", 0.22),
+		Color("#2e454b", 0.23), Color("#303e4a", 0.24), Color("#393648", 0.24),
+		Color("#4a3a4c", 0.23)
+	]
+	var canopy: Color = canopy_palette[selected_level]
+	# Distant tree crowns and trunks are intentionally low-contrast behind gameplay.
+	for tree_index in range(9):
+		var x := start_x + float(tree_index) * 340.0
+		var wobble := sin(float(tree_index) * 2.17 + float(selected_level)) * 18.0
+		var crown_y := 285.0 + wobble
+		var crown_width := 116.0 + float((tree_index * 7) % 5) * 13.0
+		var crown := PackedVector2Array([
+			Vector2(x - crown_width * 0.48, crown_y + 42.0),
+			Vector2(x - crown_width * 0.52, crown_y + 5.0),
+			Vector2(x - crown_width * 0.22, crown_y - 30.0),
+			Vector2(x - crown_width * 0.08, crown_y - 63.0),
+			Vector2(x + crown_width * 0.12, crown_y - 24.0),
+			Vector2(x + crown_width * 0.43, crown_y - 12.0),
+			Vector2(x + crown_width * 0.50, crown_y + 38.0)
+		])
+		draw_colored_polygon(crown, canopy)
+		draw_rect(Rect2(x - 5.0, crown_y + 22.0, 10.0, 145.0), Color("#24352d", 0.19))
+		# A second, lighter crown edge creates distance without hiding the photo.
+		draw_line(Vector2(x - crown_width * 0.30, crown_y + 14.0), Vector2(x - crown_width * 0.10, crown_y - 27.0), Color("#b6d1b8", 0.12), 2.0)
+	# A soft, low haze separates the playable route from the distant tree line.
+	draw_rect(Rect2(center_x - 1200.0, 365.0, 2400.0, 76.0), Color("#c3d8c4", 0.055))
+
+
 func _draw() -> void:
+	# Add subtle depth layers over the photo background, with a stable world-space seed.
+	_draw_forest_layers()
 	# Forest photo stays in the far background; soil is drawn as layered, uneven earth.
 	# Keep detail deterministic so it does not shimmer as _draw() runs every frame.
 	for platform in get_tree().get_nodes_in_group("platforms"):
