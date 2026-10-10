@@ -752,7 +752,7 @@ func _update_fx_particles(delta: float) -> void:
 		var particle_velocity: Vector2 = particle["velocity"]
 		particle_velocity.y += 190.0 * delta
 		particle["velocity"] = particle_velocity
-		particle["position"] = (particle["position"] as Vector2) + particle_velocity * delta
+		particle["position"] = particle["position"] + particle_velocity * delta
 		fx_particles[i] = particle
 	if not fx_particles.is_empty():
 		queue_redraw()
