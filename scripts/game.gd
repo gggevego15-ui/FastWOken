@@ -861,8 +861,8 @@ func _draw() -> void:
 		if kind == "spike":
 			var count: int = child.get_meta("count", 3)
 			for i in range(count):
-				var px := child.position.x - count * 9.0 + i * 18.0
-				var points := PackedVector2Array([Vector2(px - 8, child.position.y + 6), Vector2(px, child.position.y - 12), Vector2(px + 8, child.position.y + 6)])
+				var spike_x: float = child.position.x - count * 9.0 + i * 18.0
+				var points := PackedVector2Array([Vector2(spike_x - 8, child.position.y + 6), Vector2(spike_x, child.position.y - 12), Vector2(spike_x + 8, child.position.y + 6)])
 				draw_colored_polygon(points, Color("#51443e"))
 				draw_colored_polygon(PackedVector2Array([points[0], points[1], Vector2(px - 1, child.position.y + 4)]), Color("#a3a18a"))
 				draw_line(points[0], points[1], Color("#d4cbb1"), 1.5)
