@@ -14,6 +14,9 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Main menu with a selectable two-column list of all ten levels
 - Animated menu entrance with a fade-in backdrop, sliding panel, and staggered level buttons
 - Smooth fade-to-dark transitions when switching levels
+- Saved progression in Godot's `user://fastwoken_progress.cfg` using `ConfigFile`
+- Levels unlock sequentially when the previous level is cleared; locked levels are disabled in the menu
+- Best crystal count per cleared level is saved, and cleared levels are marked in the level menu
 - In-game **LEVEL SELECT** button to return to the menu at any time
 - Level selection using `[` / `]` or Page Down / Page Up; touch-device level buttons
 
