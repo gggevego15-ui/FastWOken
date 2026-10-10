@@ -11,7 +11,7 @@ func _initialize() -> void:
 
 
 func _run_validation() -> void:
-	var game = MAIN_SCENE.instantiate()
+	var game: Node = MAIN_SCENE.instantiate()
 	root.add_child(game)
 	await process_frame
 	var failures: Array[String] = []
@@ -22,8 +22,8 @@ func _run_validation() -> void:
 		for node in get_nodes_in_group("platforms"):
 			if not is_instance_valid(node) or node.get_child_count() == 0:
 				continue
-			var shape_node = node.get_child(0)
-			var shape = shape_node.shape
+			var shape_node := node.get_child(0) as CollisionShape2D
+			var shape: Shape2D = shape_node.shape
 			if not shape is RectangleShape2D:
 				continue
 			var size: Vector2 = shape.size
@@ -45,7 +45,7 @@ func _run_validation() -> void:
 			var p: Dictionary = platforms[i]
 			if bool(p["ground"]) and float(p["left"]) <= 80.0 and float(p["right"]) >= 80.0:
 				reachable[i] = 1
-		for pass_index in range(platforms.size()):
+		for _pass_index in range(platforms.size()):
 			var changed := false
 			for i in range(platforms.size()):
 				if reachable[i] == 0:
@@ -73,10 +73,10 @@ func _run_validation() -> void:
 				unreachable.append("x=%.0f top=%.0f" % [platforms[i]["x"], platforms[i]["top"]])
 		if not unreachable.is_empty():
 			failures.append("Level %02d has unreachable platforms: %s" % [level_index + 1, ", ".join(unreachable)])
-		var crystals: Array[Node] = []
+		var crystals: Array[Area2D] = []
 		for node in get_nodes_in_group("level_objects"):
 			if node is Area2D and node.get_meta("kind", "") == "crystal":
-				crystals.append(node)
+				crystals.append(node as Area2D)
 		if crystals.size() != int(game.get("crystal_total")):
 			failures.append("Level %02d crystal count mismatch: nodes=%d expected=%d" % [level_index + 1, crystals.size(), int(game.get("crystal_total"))])
 		for crystal in crystals:
