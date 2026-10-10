@@ -8,6 +8,8 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Camera following the player
 - Keyboard controls on desktop and on-screen controls on touch devices
 - Pixel-art look drawn in code so the prototype has no external asset dependencies
+- Procedurally generated looping forest ambience (wind and leaf rustle)
+- Procedurally synthesized bird calls on a separate, quieter audio layer
 
 ## Run
 1. Install Godot 4.3 or newer.
@@ -27,7 +29,7 @@ Use Godot's Export menu to install export templates and create a Windows/Linux/m
 - `project.godot` — project settings
 - `scenes/main.tscn` — level
 - `scenes/player.tscn` — player character
-- `scripts/game.gd` — level logic, hazards, collectibles, touch controls
+- `scripts/game.gd` — level logic, hazards, collectibles, touch controls, procedural forest audio
 - `scripts/player.gd` — player physics and pixel character drawing
 
 This is the first playable prototype; graphics and level design can be expanded without changing the cross-platform foundation.
