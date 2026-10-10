@@ -111,6 +111,7 @@ func _play_sfx(kind: String) -> void:
 	var low_noise := 0.0
 	var high_noise := 0.0
 	var base_pitch := rng.randf_range(0.94, 1.06)
+	var crystal_partial_two := 990.0 * base_pitch * rng.randf_range(0.998, 1.002)
 	for i in range(sample_count):
 		var t := float(i) / SAMPLE_RATE
 		var progress := t / duration
@@ -138,7 +139,7 @@ func _play_sfx(kind: String) -> void:
 			sample = (sin(phase) * 0.40 * impact_envelope + soft_thud * impact_envelope) * envelope * 0.32
 		elif kind == "crystal":
 			var f1 := 660.0 * base_pitch
-			var f2 := 990.0 * base_pitch * rng.randf_range(0.998, 1.002)
+			var f2 := crystal_partial_two
 			var f3 := 1328.0 * base_pitch
 			phase += TAU * f1 / SAMPLE_RATE
 			phase_two += TAU * f2 / SAMPLE_RATE
