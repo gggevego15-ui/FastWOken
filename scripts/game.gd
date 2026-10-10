@@ -801,25 +801,76 @@ func _update_hud() -> void:
 		score_label.text = "LEVEL %02d/10   ◆ %d/%d" % [selected_level + 1, score, crystal_total]
 
 func _draw() -> void:
-	# The forest photograph is rendered by a parallax TextureRect behind the world.
-	# Platforms use a real CC0 forest-floor texture on their walkable surfaces.
-	# Ground and platforms: soil strata, grass, pebbles and small roots.
+	# Forest photo stays in the far background; soil is drawn as layered, uneven earth.
+	# Keep detail deterministic so it does not shimmer as _draw() runs every frame.
 	for platform in get_tree().get_nodes_in_group("platforms"):
-		if not is_instance_valid(platform):
+		if not is_instance_valid(platform) or platform.get_child_count() == 0:
 			continue
 		var size: Vector2 = platform.get_child(0).shape.size
 		var rect := Rect2(platform.position - size / 2.0, size)
-		draw_rect(rect, Color("#4b4034"))
-		draw_rect(Rect2(rect.position.x, rect.position.y + 8, size.x, size.y - 8), Color("#302c26"))
+		var is_ground := size.y > 40.0
+
+		# Dark damp soil base and two subtly different strata.
+		draw_rect(rect, Color("#40362c"))
+		if is_ground:
+			var middle_y := rect.position.y + 28.0
+			var lower_y := rect.position.y + 66.0
+			var soil_mid := PackedVector2Array([
+				Vector2(rect.position.x, middle_y),
+				Vector2(rect.position.x + size.x * 0.18, middle_y + 5.0),
+				Vector2(rect.position.x + size.x * 0.39, middle_y - 2.0),
+				Vector2(rect.position.x + size.x * 0.63, middle_y + 4.0),
+				Vector2(rect.end.x, middle_y - 1.0),
+				Vector2(rect.end.x, lower_y),
+				Vector2(rect.position.x, lower_y + 3.0)
+			])
+			draw_colored_polygon(soil_mid, Color("#514336"))
+			var soil_lower := PackedVector2Array([
+				Vector2(rect.position.x, lower_y),
+				Vector2(rect.position.x + size.x * 0.22, lower_y + 4.0),
+				Vector2(rect.position.x + size.x * 0.48, lower_y - 3.0),
+				Vector2(rect.position.x + size.x * 0.77, lower_y + 2.0),
+				Vector2(rect.end.x, lower_y - 2.0),
+				Vector2(rect.end.x, rect.end.y),
+				Vector2(rect.position.x, rect.end.y)
+			])
+			draw_colored_polygon(soil_lower, Color("#302b25"))
+			# Small earthy clods, stones and thin roots break up the flat cutaway.
+			var detail_step := 37.0
+			var detail_count := int(size.x / detail_step)
+			for detail_i in range(detail_count):
+				var detail_x := rect.position.x + 9.0 + float(detail_i) * detail_step
+				var seed_value := sin((platform.position.x + float(detail_i) * 19.7) * 0.137)
+				var detail_y := rect.position.y + 38.0 + absf(seed_value) * 53.0
+				var pebble_color := Color("#77624a") if detail_i % 3 == 0 else Color("#3b342b")
+				draw_rect(Rect2(detail_x, detail_y, 3.0 + absf(seed_value) * 4.0, 2.0), pebble_color)
+				if detail_i % 4 == 1:
+					draw_line(Vector2(detail_x + 2.0, detail_y + 9.0), Vector2(detail_x + 7.0, detail_y + 13.0), Color("#29271f"), 1.5)
+					draw_line(Vector2(detail_x + 7.0, detail_y + 13.0), Vector2(detail_x + 12.0, detail_y + 12.0), Color("#29271f"), 1.0)
+		else:
+			# Floating ledges have a compact dark rock/soil underside.
+			draw_rect(Rect2(rect.position.x, rect.position.y + 8.0, size.x, maxf(0.0, size.y - 8.0)), Color("#332d27"))
+
+		# A thin photo-textured moss/leaf layer forms the walkable surface.
 		var tile_width := 128.0
 		var tile_count := int(ceil(size.x / tile_width))
 		for tile_index in range(tile_count):
-			var tile_x := rect.position.x + tile_index * tile_width
+			var tile_x := rect.position.x + float(tile_index) * tile_width
 			var draw_width := minf(tile_width, rect.end.x - tile_x)
 			var source_width := 512.0 * draw_width / tile_width
-			draw_texture_rect_region(GROUND_TEXTURE, Rect2(tile_x, rect.position.y, draw_width, 18.0), Rect2(0, 128, source_width, 72.0))
-		# A narrow dark seam separates the photo surface from the soil cutaway.
-		draw_rect(Rect2(rect.position.x, rect.position.y + 18, size.x, 3), Color(0.16, 0.14, 0.11, 0.78))
+			draw_texture_rect_region(GROUND_TEXTURE, Rect2(tile_x, rect.position.y, draw_width, minf(18.0, size.y)), Rect2(0, 128, source_width, 72.0))
+		# Mossy edge, damp seam, tiny grass blades and leaf litter.
+		draw_line(Vector2(rect.position.x, rect.position.y + 17.0), Vector2(rect.end.x, rect.position.y + 17.0), Color("#302d22", 0.85), 2.0)
+		var edge_count := int(size.x / 13.0)
+		for edge_i in range(edge_count):
+			var edge_x := rect.position.x + 5.0 + float(edge_i) * 13.0
+			var edge_noise := sin((platform.position.x + float(edge_i) * 23.0) * 0.19)
+			if edge_i % 3 != 1:
+				var blade_height := 2.0 + absf(edge_noise) * 5.0
+				var grass_color := Color("#526744") if edge_i % 2 == 0 else Color("#748052")
+				draw_line(Vector2(edge_x, rect.position.y + 3.0), Vector2(edge_x - 2.0, rect.position.y - blade_height), grass_color, 1.5)
+			if edge_i % 4 == 0:
+				draw_rect(Rect2(edge_x + 3.0, rect.position.y + 8.0 + absf(edge_noise) * 4.0, 2.0, 1.5), Color("#b0a17b", 0.8))
 
 	# Spikes, crystals and the portal retain a clean game-readable silhouette.
 	for child in get_children():
