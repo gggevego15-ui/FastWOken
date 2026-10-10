@@ -359,7 +359,7 @@ func _draw() -> void:
 			var dx := rect.position.x + detail_rng.randf_range(2.0, size.x - 2.0)
 			var dy := rect.position.y + detail_rng.randf_range(13.0, size.y - 8.0)
 			var pebble_size := detail_rng.randf_range(1.0, 3.6)
-			draw_ellipse(Rect2(dx, dy, pebble_size * 1.8, pebble_size), Color("#756b56") if d % 3 == 0 else Color("#2d3029"))
+			draw_circle(Vector2(dx, dy), pebble_size, Color("#756b56") if d % 3 == 0 else Color("#2d3029"))
 		for g in range(int(size.x / 7.0)):
 			var gx := rect.position.x + detail_rng.randf_range(0.0, size.x)
 			var gy := rect.position.y + 2.0
