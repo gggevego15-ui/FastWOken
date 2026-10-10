@@ -1,6 +1,7 @@
 extends Node2D
 
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
+const GROUND_TEXTURE := preload("res://assets/forest_leaves_02.jpg")
 var level_end := 2240.0
 var selected_level := 0
 var unlocked_level := 0
@@ -26,12 +27,14 @@ var score_label: Label
 var touch_left := false
 var touch_right := false
 var touch_jump := false
+var forest_background: TextureRect
 var applied_touch_left := false
 var applied_touch_right := false
 var applied_touch_jump := false
 
 func _ready() -> void:
 	_setup_input()
+	_setup_forest_background()
 	_load_progress()
 	_load_level(0)
 	_spawn_player()
@@ -43,6 +46,23 @@ func _ready() -> void:
 	if is_instance_valid(player):
 		player.controls_locked = true
 	queue_redraw()
+
+
+func _setup_forest_background() -> void:
+	var background_layer := CanvasLayer.new()
+	background_layer.name = "PhotographicForestBackground"
+	background_layer.layer = -1
+	add_child(background_layer)
+	forest_background = TextureRect.new()
+	forest_background.name = "ForestPhoto"
+	forest_background.texture = load("res://assets/forest_slope.jpg") as Texture2D
+	forest_background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	forest_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	forest_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	forest_background.position = Vector2.ZERO
+	forest_background.size = Vector2(1800, 540)
+	forest_background.modulate = Color(0.9, 0.94, 0.91, 1.0)
+	background_layer.add_child(forest_background)
 
 
 func _load_progress() -> void:
@@ -682,6 +702,8 @@ func _process(_delta: float) -> void:
 		_transition_to_level(selected_level + 1)
 	if Input.is_action_just_pressed("level_previous"):
 		_transition_to_level(selected_level - 1)
+	if is_instance_valid(forest_background) and is_instance_valid(camera):
+		forest_background.position.x = -camera.global_position.x * 0.15
 	queue_redraw()
 
 func _on_hazard_entered(body: Node2D) -> void:
@@ -725,140 +747,25 @@ func _update_hud() -> void:
 		score_label.text = "LEVEL %02d/10   ◆ %d/%d" % [selected_level + 1, score, crystal_total]
 
 func _draw() -> void:
-	# A realistic-feeling forest painted from layered shapes and texture details.
-	# The player remains pixel-art, creating the intended visual contrast.
-	draw_rect(Rect2(0, 0, level_end, 540), Color("#a7bdc1"))
-	# Overcast sky, with a warm break near the horizon.
-	for band in range(18):
-		var t := float(band) / 18.0
-		var c := Color("#c5d0c8").lerp(Color("#6c8585"), t)
-		draw_rect(Rect2(0, band * 18, level_end, 19), c)
-	draw_rect(Rect2(0, 255, level_end, 145), Color(0.72, 0.77, 0.69, 0.32))
-
-	# Far ridge and dense forest silhouettes.
-	var far_rng := RandomNumberGenerator.new()
-	far_rng.seed = 917
-	for i in range(38):
-		var x := float(i) * 64.0 - 20.0
-		var h := far_rng.randf_range(48.0, 145.0)
-		var w := far_rng.randf_range(62.0, 112.0)
-		var trunk := Color("#536b61").lerp(Color("#78897a"), far_rng.randf())
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(x - w * 0.5, 345), Vector2(x - w * 0.36, 345 - h * 0.48),
-			Vector2(x - w * 0.12, 345 - h), Vector2(x + w * 0.08, 345 - h * 0.68),
-			Vector2(x + w * 0.36, 345 - h * 0.91), Vector2(x + w * 0.5, 345)
-		]), trunk)
-		draw_rect(Rect2(x - 4, 345 - h * 0.38, 8, h * 0.38), Color("#625e4b"))
-
-	# Soft shafts of light through the canopy.
-	for i in range(9):
-		var x := float((i * 251 + 95) % int(level_end))
-		var beam := PackedVector2Array([
-			Vector2(x, 0), Vector2(x + 28, 0),
-			Vector2(x + 100, 385), Vector2(x + 46, 385)
-		])
-		draw_colored_polygon(beam, Color(0.96, 0.93, 0.72, 0.075))
-
-	# Foreground trees: irregular trunks, roots, bark grooves and layered foliage.
-	var tree_rng := RandomNumberGenerator.new()
-	tree_rng.seed = 202610
-	for i in range(24):
-		var x := float(i) * 105.0 + tree_rng.randf_range(-28.0, 28.0)
-		var base_y := tree_rng.randf_range(375.0, 430.0)
-		var h := tree_rng.randf_range(155.0, 280.0)
-		var trunk_w := tree_rng.randf_range(18.0, 38.0)
-		var lean := tree_rng.randf_range(-20.0, 20.0)
-		var bark := Color("#554d3c").lerp(Color("#766c51"), tree_rng.randf())
-		draw_colored_polygon(PackedVector2Array([
-			Vector2(x - trunk_w * 0.5, base_y), Vector2(x - trunk_w * 0.35, base_y - h * 0.55),
-			Vector2(x + lean * 0.3 - trunk_w * 0.25, base_y - h),
-			Vector2(x + lean * 0.3 + trunk_w * 0.2, base_y - h),
-			Vector2(x + lean + trunk_w * 0.55, base_y)
-		]), bark)
-		for groove in range(4):
-			var gx := x - trunk_w * 0.3 + groove * trunk_w * 0.19
-			draw_line(Vector2(gx, base_y - 5), Vector2(gx + lean * 0.18, base_y - h * 0.72), Color(0.2, 0.19, 0.14, 0.34), 2.0)
-		# Exposed roots spread into the forest floor.
-		draw_line(Vector2(x, base_y - 4), Vector2(x - trunk_w * 1.1, base_y + 5), bark.lightened(0.12), 4.0)
-		draw_line(Vector2(x + 2, base_y - 2), Vector2(x + trunk_w * 1.25, base_y + 4), bark.darkened(0.12), 4.0)
-		for leaf in range(13):
-			var lx := x + tree_rng.randf_range(-82.0, 82.0) + lean * 0.25
-			var ly := base_y - h + tree_rng.randf_range(-18.0, 105.0)
-			var r := tree_rng.randf_range(20.0, 48.0)
-			var foliage := Color("#263f35").lerp(Color("#64734a"), tree_rng.randf())
-			draw_circle(Vector2(lx, ly), r, foliage)
-			draw_arc(Vector2(lx - r * 0.1, ly - r * 0.12), r * 0.72, 3.2, 5.3, 12, Color(0.77, 0.79, 0.54, 0.13), 2.0)
-
-	# Thin mist sits between the trees and the playable path.
-	for i in range(5):
-		var mist_y := 305.0 + i * 24.0
-		draw_rect(Rect2(0, mist_y, level_end, 13), Color(0.86, 0.91, 0.87, 0.055))
-	for i in range(7):
-		var my := 292.0 + i * 19.0
-		draw_rect(Rect2(0, my, level_end, 8), Color(0.87, 0.91, 0.86, 0.045))
-
-	# Dense canopy shade: uneven silhouettes darken the upper edge of the scene.
-	var canopy_rng := RandomNumberGenerator.new()
-	canopy_rng.seed = 681
-	for i in range(42):
-		var cx := float(i) * 58.0 + canopy_rng.randf_range(-18.0, 18.0)
-		var cy := canopy_rng.randf_range(-24.0, 28.0)
-		var radius := canopy_rng.randf_range(30.0, 72.0)
-		draw_circle(Vector2(cx, cy), radius, Color(0.08, 0.13, 0.10, 0.28))
-
-	# Soft contact shadows cast by the foreground trees onto the forest floor.
-	var shadow_rng := RandomNumberGenerator.new()
-	shadow_rng.seed = 202610
-	for i in range(24):
-		var sx := float(i) * 105.0 + shadow_rng.randf_range(-28.0, 28.0)
-		var sy := shadow_rng.randf_range(395.0, 432.0)
-		var sw := shadow_rng.randf_range(48.0, 104.0)
-		for layer in range(4):
-			var spread := float(layer) * 9.0
-			var shadow_rect := Rect2(sx - sw * 0.5 - spread, sy - 4.0 - spread * 0.15, sw + spread * 2.0, 9.0 + spread * 0.5)
-			var shadow_points := PackedVector2Array([Vector2(shadow_rect.position.x, shadow_rect.position.y + shadow_rect.size.y * 0.5), Vector2(shadow_rect.position.x + shadow_rect.size.x * 0.18, shadow_rect.position.y), Vector2(shadow_rect.end.x - shadow_rect.size.x * 0.18, shadow_rect.position.y), Vector2(shadow_rect.end.x, shadow_rect.position.y + shadow_rect.size.y * 0.5), Vector2(shadow_rect.end.x - shadow_rect.size.x * 0.18, shadow_rect.end.y), Vector2(shadow_rect.position.x + shadow_rect.size.x * 0.18, shadow_rect.end.y)])
-			draw_colored_polygon(shadow_points, Color(0.04, 0.06, 0.04, 0.11 - layer * 0.02))
-
-	# Broad, faint light pools break up the cool forest shade.
-	for i in range(12):
-		var lx := float((i * 193 + 75) % int(level_end))
-		var ly := 335.0 + float((i * 47) % 80)
-		for layer in range(5):
-			var r := 22.0 + layer * 13.0
-			draw_circle(Vector2(lx, ly), r, Color(0.91, 0.91, 0.68, 0.018))
-
+	# The forest photograph is rendered by a parallax TextureRect behind the world.
+	# Platforms use a real CC0 forest-floor texture on their walkable surfaces.
 	# Ground and platforms: soil strata, grass, pebbles and small roots.
 	for platform in get_tree().get_nodes_in_group("platforms"):
 		if not is_instance_valid(platform):
 			continue
 		var size: Vector2 = platform.get_child(0).shape.size
 		var rect := Rect2(platform.position - size / 2.0, size)
-		draw_rect(rect, Color("#51483a"))
-		draw_rect(Rect2(rect.position.x, rect.position.y + 8, size.x, size.y - 8), Color("#3d382f"))
-		draw_rect(Rect2(rect.position.x, rect.position.y, size.x, 10), Color("#4f6843"))
-		draw_rect(Rect2(rect.position.x, rect.position.y + 7, size.x, 4), Color("#7b8051"))
-		var detail_rng := RandomNumberGenerator.new()
-		detail_rng.seed = int(platform.position.x * 17.0 + size.x)
-		for d in range(int(size.x / 8.0)):
-			var dx := rect.position.x + detail_rng.randf_range(2.0, size.x - 2.0)
-			var dy := rect.position.y + detail_rng.randf_range(13.0, size.y - 8.0)
-			var pebble_size := detail_rng.randf_range(1.0, 3.6)
-			draw_circle(Vector2(dx, dy), pebble_size, Color("#756b56") if d % 3 == 0 else Color("#2d3029"))
-		for g in range(int(size.x / 7.0)):
-			var gx := rect.position.x + detail_rng.randf_range(0.0, size.x)
-			var gy := rect.position.y + 2.0
-			draw_line(Vector2(gx, gy + 3), Vector2(gx + detail_rng.randf_range(-3.0, 3.0), gy - detail_rng.randf_range(1.0, 7.0)), Color("#87915a"), 1.4)
-
-	# Brambles and small plants along the forest floor.
-	var plant_rng := RandomNumberGenerator.new()
-	plant_rng.seed = 844
-	for i in range(160):
-		var px := plant_rng.randf_range(0.0, level_end)
-		var py := plant_rng.randf_range(385.0, 455.0)
-		var leaf_color := Color("#3c5940").lerp(Color("#8b925c"), plant_rng.randf())
-		draw_line(Vector2(px, py + 8), Vector2(px + plant_rng.randf_range(-7.0, 7.0), py - plant_rng.randf_range(2.0, 12.0)), leaf_color, 2.0)
-		if i % 4 == 0:
-			draw_circle(Vector2(px + 2, py + 1), plant_rng.randf_range(2.0, 4.0), Color("#a1a16c"))
+		draw_rect(rect, Color("#4b4034"))
+		draw_rect(Rect2(rect.position.x, rect.position.y + 8, size.x, size.y - 8), Color("#302c26"))
+		var tile_width := 128.0
+		var tile_count := int(ceil(size.x / tile_width))
+		for tile_index in range(tile_count):
+			var tile_x := rect.position.x + tile_index * tile_width
+			var draw_width := minf(tile_width, rect.end.x - tile_x)
+			var source_width := 512.0 * draw_width / tile_width
+			draw_texture_rect_region(GROUND_TEXTURE, Rect2(tile_x, rect.position.y, draw_width, 18.0), Rect2(0, 128, source_width, 72.0))
+		# A narrow dark seam separates the photo surface from the soil cutaway.
+		draw_rect(Rect2(rect.position.x, rect.position.y + 18, size.x, 3), Color(0.16, 0.14, 0.11, 0.78))
 
 	# Spikes, crystals and the portal retain a clean game-readable silhouette.
 	for child in get_children():
