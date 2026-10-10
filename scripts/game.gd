@@ -538,6 +538,10 @@ func _build_ui() -> void:
 	menu_button.add_theme_font_size_override("font_size", 15)
 	menu_button.add_theme_color_override("font_color", Color.WHITE)
 	menu_button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.92)))
+	menu_button.add_theme_stylebox_override("hover", _panel_style(Color("#326d69")))
+	menu_button.add_theme_stylebox_override("pressed", _panel_style(Color("#23534f")))
+	menu_button.add_theme_stylebox_override("focus", _panel_style(Color("#326d69")))
+	menu_button.add_theme_color_override("font_hover_color", Color("#a6ffed"))
 	hud.add_child(menu_button)
 	menu_button.pressed.connect(_show_main_menu)
 
@@ -686,7 +690,14 @@ func _show_main_menu() -> void:
 		level_button.add_theme_stylebox_override("normal", _panel_style(level_colors[i]))
 		level_button.add_theme_stylebox_override("hover", _panel_style(Color("#387263")))
 		level_button.add_theme_stylebox_override("pressed", _panel_style(Color("#5a9a80")))
+		level_button.add_theme_stylebox_override("focus", _panel_style(Color("#2d665b")))
 		level_button.add_theme_stylebox_override("disabled", _panel_style(Color("#202a29")))
+		level_button.add_theme_color_override("font_hover_color", Color("#a6ffed"))
+		level_button.add_theme_color_override("font_pressed_color", Color("#ffffff"))
+		if i > unlocked_level:
+			level_button.tooltip_text = "Clear the previous stage to unlock this route."
+		else:
+			level_button.tooltip_text = "Enter %s" % names[i].substr(4)
 		grid.add_child(level_button)
 		level_button.pressed.connect(_transition_to_level.bind(i))
 		var button_tween := create_tween()
