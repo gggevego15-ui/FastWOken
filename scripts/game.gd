@@ -339,9 +339,42 @@ func _draw() -> void:
 			draw_arc(Vector2(lx - r * 0.1, ly - r * 0.12), r * 0.72, 3.2, 5.3, 12, Color(0.77, 0.79, 0.54, 0.13), 2.0)
 
 	# Thin mist sits between the trees and the playable path.
+	for i in range(5):
+		var mist_y := 305.0 + i * 24.0
+		draw_rect(Rect2(0, mist_y, LEVEL_END, 13), Color(0.86, 0.91, 0.87, 0.055))
 	for i in range(7):
 		var my := 292.0 + i * 19.0
 		draw_rect(Rect2(0, my, LEVEL_END, 8), Color(0.87, 0.91, 0.86, 0.045))
+
+	# Dense canopy shade: uneven silhouettes darken the upper edge of the scene.
+	var canopy_rng := RandomNumberGenerator.new()
+	canopy_rng.seed = 681
+	for i in range(42):
+		var cx := float(i) * 58.0 + canopy_rng.randf_range(-18.0, 18.0)
+		var cy := canopy_rng.randf_range(-24.0, 28.0)
+		var radius := canopy_rng.randf_range(30.0, 72.0)
+		draw_circle(Vector2(cx, cy), radius, Color(0.08, 0.13, 0.10, 0.28))
+
+	# Soft contact shadows cast by the foreground trees onto the forest floor.
+	var shadow_rng := RandomNumberGenerator.new()
+	shadow_rng.seed = 202610
+	for i in range(24):
+		var sx := float(i) * 105.0 + shadow_rng.randf_range(-28.0, 28.0)
+		var sy := shadow_rng.randf_range(395.0, 432.0)
+		var sw := shadow_rng.randf_range(48.0, 104.0)
+		for layer in range(4):
+			var spread := float(layer) * 9.0
+			var shadow_rect := Rect2(sx - sw * 0.5 - spread, sy - 4.0 - spread * 0.15, sw + spread * 2.0, 9.0 + spread * 0.5)
+			var shadow_points := PackedVector2Array([Vector2(shadow_rect.position.x, shadow_rect.position.y + shadow_rect.size.y * 0.5), Vector2(shadow_rect.position.x + shadow_rect.size.x * 0.18, shadow_rect.position.y), Vector2(shadow_rect.end.x - shadow_rect.size.x * 0.18, shadow_rect.position.y), Vector2(shadow_rect.end.x, shadow_rect.position.y + shadow_rect.size.y * 0.5), Vector2(shadow_rect.end.x - shadow_rect.size.x * 0.18, shadow_rect.end.y), Vector2(shadow_rect.position.x + shadow_rect.size.x * 0.18, shadow_rect.end.y)])
+			draw_colored_polygon(shadow_points, Color(0.04, 0.06, 0.04, 0.11 - layer * 0.02))
+
+	# Broad, faint light pools break up the cool forest shade.
+	for i in range(12):
+		var lx := float((i * 193 + 75) % int(LEVEL_END))
+		var ly := 335.0 + float((i * 47) % 80)
+		for layer in range(5):
+			var r := 22.0 + layer * 13.0
+			draw_circle(Vector2(lx, ly), r, Color(0.91, 0.91, 0.68, 0.018))
 
 	# Ground and platforms: soil strata, grass, pebbles and small roots.
 	for platform in get_tree().get_nodes_in_group("platforms"):
