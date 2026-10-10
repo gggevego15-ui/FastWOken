@@ -732,15 +732,17 @@ func _on_goal_reached(body: Node2D) -> void:
 	message_label.text = "LEVEL %02d CLEAR!  Crystals: %d/%d  —  Press ] for next" % [selected_level + 1, score, crystal_total]
 
 func _respawn() -> void:
-	if won:
-		_load_level(selected_level)
+	if won or not is_instance_valid(player) or player.is_dying:
 		return
 	deaths += 1
-	player.reset_to_spawn()
+	player.play_death_animation()
 	var deaths_label: Label = hud.find_child("Deaths", true, false)
 	if deaths_label:
 		deaths_label.text = "  ☠ %d" % deaths
 	_update_hud()
+	await get_tree().create_timer(0.42).timeout
+	if is_instance_valid(player):
+		player.reset_to_spawn()
 
 func _update_hud() -> void:
 	if is_instance_valid(score_label):
