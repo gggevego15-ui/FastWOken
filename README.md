@@ -31,7 +31,7 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - **R**: restart after a death or replay the current level after clearing it
 - **]** or **Page Up**: start the next level
 - **[** or **Page Down**: start the previous level
-- **LEVEL SELECT**: open the main menu and choose any of the ten levels
+- **LEVEL SELECT**: open the main menu and choose any unlocked level
 - Level selection fades smoothly between stages; menu elements animate into view
 - On touch devices, use the on-screen arrows and jump button.
 
