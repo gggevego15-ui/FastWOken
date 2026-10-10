@@ -15,6 +15,8 @@ var won := false
 var menu_open := true
 var main_menu_layer: CanvasLayer
 var game_hud: CanvasLayer
+var transition_active := false
+var transition_overlay: ColorRect
 var message_label: Label
 var score_label: Label
 var touch_left := false
@@ -326,13 +328,21 @@ func _show_main_menu() -> void:
 	shade.position = Vector2.ZERO
 	shade.size = Vector2(960, 540)
 	shade.color = Color(0.025, 0.055, 0.065, 0.94)
+	shade.modulate.a = 0.0
 	main_menu_layer.add_child(shade)
+	var shade_tween := create_tween()
+	shade_tween.tween_property(shade, "modulate:a", 1.0, 0.35)
 
 	var panel := PanelContainer.new()
-	panel.position = Vector2(150, 24)
+	panel.position = Vector2(150, 34)
 	panel.size = Vector2(660, 492)
+	panel.modulate.a = 0.0
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.12, 0.13, 0.97)))
 	main_menu_layer.add_child(panel)
+	var panel_tween := create_tween()
+	panel_tween.set_parallel(true)
+	panel_tween.tween_property(panel, "position:y", 24.0, 0.42).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	panel_tween.tween_property(panel, "modulate:a", 1.0, 0.32)
 
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 10)
@@ -368,6 +378,7 @@ func _show_main_menu() -> void:
 	for i in range(names.size()):
 		var level_button := Button.new()
 		level_button.text = names[i]
+		level_button.modulate.a = 0.0
 		level_button.custom_minimum_size = Vector2(275, 48)
 		level_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		level_button.add_theme_font_size_override("font_size", 17)
@@ -376,7 +387,10 @@ func _show_main_menu() -> void:
 		level_button.add_theme_stylebox_override("hover", _panel_style(Color("#387263")))
 		level_button.add_theme_stylebox_override("pressed", _panel_style(Color("#5a9a80")))
 		grid.add_child(level_button)
-		level_button.pressed.connect(_start_selected_level.bind(i))
+		level_button.pressed.connect(_transition_to_level.bind(i))
+		var button_tween := create_tween()
+		button_tween.tween_interval(0.08 + float(i) * 0.035)
+		button_tween.tween_property(level_button, "modulate:a", 1.0, 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 	var footer := Label.new()
 	footer.text = "PC: A/D or ←/→ to move • Space to jump • R to restart"
@@ -384,6 +398,48 @@ func _show_main_menu() -> void:
 	footer.add_theme_font_size_override("font_size", 13)
 	footer.add_theme_color_override("font_color", Color("#a7bcb2"))
 	content.add_child(footer)
+
+
+
+func _transition_to_level(index: int) -> void:
+	if transition_active:
+		return
+	transition_active = true
+	if is_instance_valid(player):
+		player.controls_locked = true
+	if is_instance_valid(transition_overlay):
+		transition_overlay.queue_free()
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	add_child(layer)
+	transition_overlay = ColorRect.new()
+	transition_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	transition_overlay.color = Color(0.015, 0.035, 0.04, 0.0)
+	transition_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(transition_overlay)
+	var tween := create_tween()
+	tween.tween_property(transition_overlay, "color:a", 1.0, 0.28).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	tween.tween_callback(_finish_level_transition.bind(index))
+
+
+func _finish_level_transition(index: int) -> void:
+	_start_selected_level(index)
+	if not is_instance_valid(transition_overlay):
+		transition_active = false
+		return
+	var tween := create_tween()
+	tween.tween_property(transition_overlay, "color:a", 0.0, 0.38).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(_clear_transition_overlay)
+
+
+func _clear_transition_overlay() -> void:
+	if is_instance_valid(transition_overlay):
+		var layer := transition_overlay.get_parent()
+		if is_instance_valid(layer):
+			layer.queue_free()
+	transition_overlay = null
+	transition_active = false
+
 
 
 func _start_selected_level(index: int) -> void:
@@ -411,7 +467,7 @@ func _add_level_touch_button(caption: String, at: Vector2, direction: int) -> vo
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.86)))
 	hud.add_child(button)
-	button.pressed.connect(func(): _start_selected_level(selected_level + direction))
+	button.pressed.connect(func(): _transition_to_level(selected_level + direction))
 
 func _panel_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -473,9 +529,9 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		_respawn()
 	if Input.is_action_just_pressed("level_next"):
-		_start_selected_level(selected_level + 1)
+		_transition_to_level(selected_level + 1)
 	if Input.is_action_just_pressed("level_previous"):
-		_start_selected_level(selected_level - 1)
+		_transition_to_level(selected_level - 1)
 	queue_redraw()
 
 func _on_hazard_entered(body: Node2D) -> void:
