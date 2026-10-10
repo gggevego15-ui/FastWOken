@@ -7,7 +7,8 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Spikes, collectible crystals, and a goal portal
 - Camera following the player
 - Keyboard controls on desktop and on-screen controls on touch devices
-- Pixel-art look drawn in code so the prototype has no external asset dependencies
+- Real photographic forest panorama background (Poly Haven, CC0)
+- Photogrammetry-based forest-floor texture on platform tops (Poly Haven, CC0)
 - Procedurally generated looping forest ambience (wind and leaf rustle)
 - Procedurally synthesized bird calls on a separate, quieter audio layer
 - Generated-in-code sound effects for jumping, collecting crystals, and activating the goal portal
@@ -49,3 +50,9 @@ Use Godot's Export menu to install export templates and create a Windows/Linux/m
 - `scripts/player.gd` — player physics and pixel character drawing
 
 This is the first playable prototype; graphics and level design can be expanded without changing the cross-platform foundation.
+
+
+## Visual asset sources
+- Forest Slope panoramic forest photo by Andreas Mischok, Poly Haven, CC0: https://polyhaven.com/a/forest_slope
+- Forest Leaves 02 ground texture by Rob Tuytel, Poly Haven, CC0: https://polyhaven.com/a/forest_leaves_02
+- Source assets are resized for real-time 2D rendering and mobile memory use.
