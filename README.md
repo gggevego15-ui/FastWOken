@@ -10,6 +10,7 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Pixel-art look drawn in code so the prototype has no external asset dependencies
 - Procedurally generated looping forest ambience (wind and leaf rustle)
 - Procedurally synthesized bird calls on a separate, quieter audio layer
+- Generated-in-code sound effects for jumping, collecting crystals, and activating the goal portal
 - 10 handcrafted challenge levels with distinct platform layouts and hazard patterns
 - Main menu with a selectable two-column list of all ten levels
 - Animated menu entrance with a fade-in backdrop, sliding panel, and staggered level buttons
@@ -42,7 +43,7 @@ Use Godot's Export menu to install export templates and create a Windows/Linux/m
 - `project.godot` — project settings
 - `scenes/main.tscn` — level
 - `scenes/player.tscn` — player character
-- `scripts/game.gd` — level logic, ten level layouts, hazards, collectibles, touch controls, procedural forest audio
+- `scripts/game.gd` — level logic, ten level layouts, hazards, collectibles, touch controls, procedural forest ambience and synthesized sound effects
 - `scripts/player.gd` — player physics and pixel character drawing
 
 This is the first playable prototype; graphics and level design can be expanded without changing the cross-platform foundation.
