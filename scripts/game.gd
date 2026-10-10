@@ -31,8 +31,11 @@ var forest_background: TextureRect
 var applied_touch_left := false
 var applied_touch_right := false
 var applied_touch_jump := false
+var fx_particles: Array[Dictionary] = []
+var fx_rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
+	fx_rng.randomize()
 	_setup_input()
 	_setup_forest_background()
 	_load_progress()
@@ -348,6 +351,7 @@ func _spawn_player() -> void:
 	player = PLAYER_SCENE.instantiate()
 	player.position = Vector2(80, 350)
 	player.spawn_position = player.position
+	player.fx_requested.connect(_on_player_fx_requested)
 	add_child(player)
 	camera = Camera2D.new()
 	camera.position_smoothing_enabled = true
@@ -670,7 +674,8 @@ func _add_touch_button(caption: String, at: Vector2, action: String) -> void:
 		button.button_down.connect(func(): touch_jump = true)
 		button.button_up.connect(func(): touch_jump = false)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_update_fx_particles(delta)
 	if menu_open or not is_instance_valid(player):
 		return
 	if touch_left != applied_touch_left:
@@ -705,6 +710,53 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(forest_background) and is_instance_valid(camera):
 		forest_background.position.x = -camera.global_position.x * 0.15
 	queue_redraw()
+
+
+func _on_player_fx_requested(kind: String, at: Vector2, direction: int) -> void:
+	var count := 4 if kind == "run" else (13 if kind == "land" else 7)
+	for i in range(count):
+		var angle := fx_rng.randf_range(-PI * 0.92, -PI * 0.08)
+		if kind == "run":
+			angle = fx_rng.randf_range(-PI * 0.82, -PI * 0.18)
+		var speed := fx_rng.randf_range(22.0, 85.0) if kind == "land" else fx_rng.randf_range(14.0, 48.0)
+		var horizontal := cos(angle) * speed
+		if kind == "run":
+			horizontal = -direction * fx_rng.randf_range(18.0, 62.0)
+		var vertical := sin(angle) * speed
+		if kind == "jump":
+			vertical = -fx_rng.randf_range(18.0, 58.0)
+		var tint := Color("#b5a58a") if i % 3 != 0 else Color("#d7c9a7")
+		var size := fx_rng.randf_range(2.0, 4.5) if kind == "land" else fx_rng.randf_range(1.5, 3.0)
+		if kind == "run" and i == count - 1:
+			tint = Color("#76e9d7")
+			size = 2.0
+		fx_particles.append({
+			"position": at + Vector2(fx_rng.randf_range(-5.0, 5.0), fx_rng.randf_range(-2.0, 2.0)),
+			"velocity": Vector2(horizontal, vertical),
+			"life": fx_rng.randf_range(0.22, 0.42) if kind == "run" else fx_rng.randf_range(0.32, 0.58),
+			"max_life": 0.42 if kind == "run" else 0.58,
+			"size": size,
+			"color": tint
+		})
+	if fx_particles.size() > 160:
+		fx_particles = fx_particles.slice(fx_particles.size() - 160)
+
+
+func _update_fx_particles(delta: float) -> void:
+	for i in range(fx_particles.size() - 1, -1, -1):
+		var particle: Dictionary = fx_particles[i]
+		particle["life"] = float(particle["life"]) - delta
+		if float(particle["life"]) <= 0.0:
+			fx_particles.remove_at(i)
+			continue
+		var particle_velocity: Vector2 = particle["velocity"]
+		particle_velocity.y += 190.0 * delta
+		particle["velocity"] = particle_velocity
+		particle["position"] = (particle["position"] as Vector2) + particle_velocity * delta
+		fx_particles[i] = particle
+	if not fx_particles.is_empty():
+		queue_redraw()
+
 
 func _on_hazard_entered(body: Node2D) -> void:
 	if body == player:
@@ -795,3 +847,12 @@ func _draw() -> void:
 			draw_rect(Rect2(p.x - 18, p.y - 42, 36, 84), Color("#594c68"), false, 6)
 			draw_rect(Rect2(p.x - 13, p.y - 36, 26, 72), Color("#8b7ed0", 0.72))
 			draw_rect(Rect2(p.x - 7, p.y - 30, 14, 60), Color("#c4fff2", 0.82))
+
+	# Lightweight pixel particles: earthy dust plus a mint glint in the running trail.
+	for particle in fx_particles:
+		var life_ratio := clampf(float(particle["life"]) / float(particle["max_life"]), 0.0, 1.0)
+		var particle_color: Color = particle["color"]
+		particle_color.a = life_ratio * 0.78
+		var particle_position: Vector2 = particle["position"]
+		var particle_size: float = float(particle["size"]) * (0.45 + life_ratio * 0.55)
+		draw_rect(Rect2(particle_position, Vector2(particle_size, particle_size)), particle_color)
