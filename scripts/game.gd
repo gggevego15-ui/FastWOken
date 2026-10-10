@@ -388,13 +388,7 @@ func _on_goal_reached(body: Node2D) -> void:
 
 func _respawn() -> void:
 	if won:
-		won = false
-		score = 0
-		for node in get_children():
-			if node is Area2D and node.get_meta("kind", "") == "crystal":
-				node.queue_free()
-		# Restart the complete level for a clean run.
-		get_tree().reload_current_scene()
+		_load_level(selected_level)
 		return
 	deaths += 1
 	player.reset_to_spawn()
