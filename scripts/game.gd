@@ -15,6 +15,9 @@ var score_label: Label
 var touch_left := false
 var touch_right := false
 var touch_jump := false
+var applied_touch_left := false
+var applied_touch_right := false
+var applied_touch_jump := false
 
 func _ready() -> void:
 	_setup_input()
@@ -206,18 +209,24 @@ func _add_touch_button(caption: String, at: Vector2, action: String) -> void:
 func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		return
-	if touch_left:
-		Input.action_press("move_left")
-	else:
-		Input.action_release("move_left")
-	if touch_right:
-		Input.action_press("move_right")
-	else:
-		Input.action_release("move_right")
-	if touch_jump:
-		Input.action_press("jump")
-	else:
-		Input.action_release("jump")
+	if touch_left != applied_touch_left:
+		if touch_left:
+			Input.action_press("move_left")
+		else:
+			Input.action_release("move_left")
+		applied_touch_left = touch_left
+	if touch_right != applied_touch_right:
+		if touch_right:
+			Input.action_press("move_right")
+		else:
+			Input.action_release("move_right")
+		applied_touch_right = touch_right
+	if touch_jump != applied_touch_jump:
+		if touch_jump:
+			Input.action_press("jump")
+		else:
+			Input.action_release("jump")
+		applied_touch_jump = touch_jump
 
 	if player.global_position.y > 620:
 		_respawn()
