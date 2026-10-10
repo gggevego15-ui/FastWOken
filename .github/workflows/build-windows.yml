@@ -37,7 +37,13 @@ jobs:
           git add assets/forest_slope.jpg assets/forest_leaves_02.jpg
           if ! git diff --cached --quiet; then
             git commit -m "Add CC0 photographic forest background and ground texture"
-            git push
+            git fetch origin main
+            if git cat-file -e origin/main:assets/forest_slope.jpg 2>/dev/null && git cat-file -e origin/main:assets/forest_leaves_02.jpg 2>/dev/null; then
+              git reset --hard origin/main
+            else
+              git rebase origin/main
+              git push
+            fi
           fi
 
       - name: Set up Godot and export templates
