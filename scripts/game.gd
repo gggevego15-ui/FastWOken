@@ -431,6 +431,9 @@ func _show_main_menu() -> void:
 
 
 func _transition_to_level(index: int) -> void:
+	var target_level := posmod(index, 10)
+	if target_level > unlocked_level:
+		return
 	if transition_active:
 		return
 	transition_active = true
