@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+signal fx_requested(kind: String, at: Vector2, facing: int)
+
 const RUN_SPEED := 245.0
 const ACCELERATION := 1700.0
 const FRICTION := 1900.0
@@ -18,6 +20,7 @@ var landing_time := 0.0
 var was_on_floor := false
 var is_dying := false
 var death_time := 0.0
+var run_dust_timer := 0.0
 
 func _ready() -> void:
 	add_to_group("player")
@@ -56,11 +59,20 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("jump") and on_floor_before_move:
 		velocity.y = JUMP_VELOCITY
+		fx_requested.emit("jump", global_position + Vector2(0, 3), facing)
 
 	move_and_slide()
 	var on_floor_after_move := is_on_floor()
 	if not on_floor_before_move and on_floor_after_move and velocity.y >= 0.0:
 		landing_time = LANDING_DURATION
+		fx_requested.emit("land", global_position + Vector2(0, 4), facing)
+	if on_floor_after_move and absf(velocity.x) > 95.0:
+		run_dust_timer -= delta
+		if run_dust_timer <= 0.0:
+			fx_requested.emit("run", global_position + Vector2(-facing * 5.0, 1), facing)
+			run_dust_timer = 0.075
+	else:
+		run_dust_timer = 0.0
 	if landing_time > 0.0:
 		landing_time = maxf(0.0, landing_time - delta)
 
@@ -89,6 +101,7 @@ func reset_to_spawn() -> void:
 	is_dying = false
 	death_time = 0.0
 	landing_time = 0.0
+	run_dust_timer = 0.0
 	controls_locked = false
 	queue_redraw()
 
