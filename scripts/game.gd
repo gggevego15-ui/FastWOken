@@ -3,6 +3,9 @@ extends Node2D
 const PLAYER_SCENE := preload("res://scenes/player.tscn")
 var level_end := 2240.0
 var selected_level := 0
+var unlocked_level := 0
+var best_crystals: Dictionary = {}
+const PROGRESS_PATH := "user://fastwoken_progress.cfg"
 var crystal_total := 8
 const FLOOR_Y := 468.0
 
@@ -28,6 +31,7 @@ var applied_touch_jump := false
 
 func _ready() -> void:
 	_setup_input()
+	_load_progress()
 	_load_level(0)
 	_spawn_player()
 	_build_ui()
@@ -36,6 +40,26 @@ func _ready() -> void:
 	if is_instance_valid(player):
 		player.controls_locked = true
 	queue_redraw()
+
+
+func _load_progress() -> void:
+	var config := ConfigFile.new()
+	if config.load(PROGRESS_PATH) != OK:
+		unlocked_level = 0
+		best_crystals = {}
+		return
+	unlocked_level = clampi(int(config.get_value("progress", "unlocked_level", 0)), 0, 9)
+	var stored_scores = config.get_value("progress", "best_crystals", {})
+	best_crystals = stored_scores if stored_scores is Dictionary else {}
+
+
+func _save_progress() -> void:
+	var config := ConfigFile.new()
+	config.set_value("progress", "unlocked_level", unlocked_level)
+	config.set_value("progress", "best_crystals", best_crystals)
+	var error := config.save(PROGRESS_PATH)
+	if error != OK:
+		push_warning("FastWOken could not save progress (error %d)." % error)
 
 
 func _setup_forest_audio() -> void:
@@ -378,6 +402,11 @@ func _show_main_menu() -> void:
 	for i in range(names.size()):
 		var level_button := Button.new()
 		level_button.text = names[i]
+		if i > unlocked_level:
+			level_button.text += "  [LOCKED]"
+			level_button.disabled = true
+		elif best_crystals.has(str(i)):
+			level_button.text += "  [CLEAR]"
 		level_button.modulate.a = 0.0
 		level_button.custom_minimum_size = Vector2(275, 48)
 		level_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -550,6 +579,11 @@ func _on_goal_reached(body: Node2D) -> void:
 		return
 	won = true
 	player.controls_locked = true
+	var level_key := str(selected_level)
+	best_crystals[level_key] = maxi(int(best_crystals.get(level_key, 0)), score)
+	if selected_level < 9:
+		unlocked_level = maxi(unlocked_level, selected_level + 1)
+	_save_progress()
 	message_label.text = "LEVEL %02d CLEAR!  Crystals: %d/%d  —  Press ] for next" % [selected_level + 1, score, crystal_total]
 
 func _respawn() -> void:
