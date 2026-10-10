@@ -288,6 +288,20 @@ func _build_ui() -> void:
 		_add_touch_button("◀", Vector2(28, 420), "left")
 		_add_touch_button("▶", Vector2(112, 420), "right")
 		_add_touch_button("JUMP", Vector2(820, 410), "jump")
+		_add_level_touch_button("LEVEL −", Vector2(360, 448), -1)
+		_add_level_touch_button("LEVEL +", Vector2(500, 448), 1)
+
+
+func _add_level_touch_button(caption: String, at: Vector2, direction: int) -> void:
+	var button := Button.new()
+	button.text = caption
+	button.position = at
+	button.size = Vector2(112, 42)
+	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.86)))
+	hud.add_child(button)
+	button.pressed.connect(func(): _load_level(selected_level + direction))
 
 func _panel_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -401,8 +415,8 @@ func _draw() -> void:
 	for band in range(18):
 		var t := float(band) / 18.0
 		var c := Color("#c5d0c8").lerp(Color("#6c8585"), t)
-		draw_rect(Rect2(0, band * 18, LEVEL_END, 19), c)
-	draw_rect(Rect2(0, 255, LEVEL_END, 145), Color(0.72, 0.77, 0.69, 0.32))
+		draw_rect(Rect2(0, band * 18, level_end, 19), c)
+	draw_rect(Rect2(0, 255, level_end, 145), Color(0.72, 0.77, 0.69, 0.32))
 
 	# Far ridge and dense forest silhouettes.
 	var far_rng := RandomNumberGenerator.new()
@@ -421,7 +435,7 @@ func _draw() -> void:
 
 	# Soft shafts of light through the canopy.
 	for i in range(9):
-		var x := float((i * 251 + 95) % int(LEVEL_END))
+		var x := float((i * 251 + 95) % int(level_end))
 		var beam := PackedVector2Array([
 			Vector2(x, 0), Vector2(x + 28, 0),
 			Vector2(x + 100, 385), Vector2(x + 46, 385)
@@ -461,10 +475,10 @@ func _draw() -> void:
 	# Thin mist sits between the trees and the playable path.
 	for i in range(5):
 		var mist_y := 305.0 + i * 24.0
-		draw_rect(Rect2(0, mist_y, LEVEL_END, 13), Color(0.86, 0.91, 0.87, 0.055))
+		draw_rect(Rect2(0, mist_y, level_end, 13), Color(0.86, 0.91, 0.87, 0.055))
 	for i in range(7):
 		var my := 292.0 + i * 19.0
-		draw_rect(Rect2(0, my, LEVEL_END, 8), Color(0.87, 0.91, 0.86, 0.045))
+		draw_rect(Rect2(0, my, level_end, 8), Color(0.87, 0.91, 0.86, 0.045))
 
 	# Dense canopy shade: uneven silhouettes darken the upper edge of the scene.
 	var canopy_rng := RandomNumberGenerator.new()
@@ -490,7 +504,7 @@ func _draw() -> void:
 
 	# Broad, faint light pools break up the cool forest shade.
 	for i in range(12):
-		var lx := float((i * 193 + 75) % int(LEVEL_END))
+		var lx := float((i * 193 + 75) % int(level_end))
 		var ly := 335.0 + float((i * 47) % 80)
 		for layer in range(5):
 			var r := 22.0 + layer * 13.0
@@ -522,7 +536,7 @@ func _draw() -> void:
 	var plant_rng := RandomNumberGenerator.new()
 	plant_rng.seed = 844
 	for i in range(160):
-		var px := plant_rng.randf_range(0.0, LEVEL_END)
+		var px := plant_rng.randf_range(0.0, level_end)
 		var py := plant_rng.randf_range(385.0, 455.0)
 		var leaf_color := Color("#3c5940").lerp(Color("#8b925c"), plant_rng.randf())
 		draw_line(Vector2(px, py + 8), Vector2(px + plant_rng.randf_range(-7.0, 7.0), py - plant_rng.randf_range(2.0, 12.0)), leaf_color, 2.0)
