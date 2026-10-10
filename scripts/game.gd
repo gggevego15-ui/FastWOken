@@ -274,40 +274,131 @@ func _update_hud() -> void:
 		score_label.text = "◆ %d / 8" % score
 
 func _draw() -> void:
-	# Procedural parallax-like pixel skyline and platform tops.
-	draw_rect(Rect2(0, 0, LEVEL_END, 540), Color("#090d25"))
-	for i in range(90):
-		var x := float((i * 137 + 31) % int(LEVEL_END))
-		var y := float((i * 71 + 17) % 320)
-		draw_rect(Rect2(x, y, 3, 3), Color(0.45, 0.75, 1.0, 0.45))
-	for i in range(22):
-		var x := float(i * 112)
-		var h := float(70 + (i * 37) % 100)
-		draw_rect(Rect2(x, 400 - h, 72, h), Color("#111936"))
-		draw_rect(Rect2(x + 12, 410 - h, 6, 6), Color("#20365b"))
+	# A realistic-feeling forest painted from layered shapes and texture details.
+	# The player remains pixel-art, creating the intended visual contrast.
+	draw_rect(Rect2(0, 0, LEVEL_END, 540), Color("#a7bdc1"))
+	# Overcast sky, with a warm break near the horizon.
+	for band in range(18):
+		var t := float(band) / 18.0
+		var c := Color("#c5d0c8").lerp(Color("#6c8585"), t)
+		draw_rect(Rect2(0, band * 18, LEVEL_END, 19), c)
+	draw_rect(Rect2(0, 255, LEVEL_END, 145), Color(0.72, 0.77, 0.69, 0.32))
+
+	# Far ridge and dense forest silhouettes.
+	var far_rng := RandomNumberGenerator.new()
+	far_rng.seed = 917
+	for i in range(38):
+		var x := float(i) * 64.0 - 20.0
+		var h := far_rng.randf_range(48.0, 145.0)
+		var w := far_rng.randf_range(62.0, 112.0)
+		var trunk := Color("#536b61").lerp(Color("#78897a"), far_rng.randf())
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(x - w * 0.5, 345), Vector2(x - w * 0.36, 345 - h * 0.48),
+			Vector2(x - w * 0.12, 345 - h), Vector2(x + w * 0.08, 345 - h * 0.68),
+			Vector2(x + w * 0.36, 345 - h * 0.91), Vector2(x + w * 0.5, 345)
+		]), trunk)
+		draw_rect(Rect2(x - 4, 345 - h * 0.38, 8, h * 0.38), Color("#625e4b"))
+
+	# Soft shafts of light through the canopy.
+	for i in range(9):
+		var x := float((i * 251 + 95) % int(LEVEL_END))
+		var beam := PackedVector2Array([
+			Vector2(x, 0), Vector2(x + 28, 0),
+			Vector2(x + 100, 385), Vector2(x + 46, 385)
+		])
+		draw_colored_polygon(beam, Color(0.96, 0.93, 0.72, 0.075))
+
+	# Foreground trees: irregular trunks, roots, bark grooves and layered foliage.
+	var tree_rng := RandomNumberGenerator.new()
+	tree_rng.seed = 202610
+	for i in range(24):
+		var x := float(i) * 105.0 + tree_rng.randf_range(-28.0, 28.0)
+		var base_y := tree_rng.randf_range(375.0, 430.0)
+		var h := tree_rng.randf_range(155.0, 280.0)
+		var trunk_w := tree_rng.randf_range(18.0, 38.0)
+		var lean := tree_rng.randf_range(-20.0, 20.0)
+		var bark := Color("#554d3c").lerp(Color("#766c51"), tree_rng.randf())
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(x - trunk_w * 0.5, base_y), Vector2(x - trunk_w * 0.35, base_y - h * 0.55),
+			Vector2(x + lean * 0.3 - trunk_w * 0.25, base_y - h),
+			Vector2(x + lean * 0.3 + trunk_w * 0.2, base_y - h),
+			Vector2(x + lean + trunk_w * 0.55, base_y)
+		]), bark)
+		for groove in range(4):
+			var gx := x - trunk_w * 0.3 + groove * trunk_w * 0.19
+			draw_line(Vector2(gx, base_y - 5), Vector2(gx + lean * 0.18, base_y - h * 0.72), Color(0.2, 0.19, 0.14, 0.34), 2.0)
+		# Exposed roots spread into the forest floor.
+		draw_line(Vector2(x, base_y - 4), Vector2(x - trunk_w * 1.1, base_y + 5), bark.lightened(0.12), 4.0)
+		draw_line(Vector2(x + 2, base_y - 2), Vector2(x + trunk_w * 1.25, base_y + 4), bark.darkened(0.12), 4.0)
+		for leaf in range(13):
+			var lx := x + tree_rng.randf_range(-82.0, 82.0) + lean * 0.25
+			var ly := base_y - h + tree_rng.randf_range(-18.0, 105.0)
+			var r := tree_rng.randf_range(20.0, 48.0)
+			var foliage := Color("#263f35").lerp(Color("#64734a"), tree_rng.randf())
+			draw_circle(Vector2(lx, ly), r, foliage)
+			draw_arc(Vector2(lx - r * 0.1, ly - r * 0.12), r * 0.72, 3.2, 5.3, 12, Color(0.77, 0.79, 0.54, 0.13), 2.0)
+
+	# Thin mist sits between the trees and the playable path.
+	for i in range(7):
+		var my := 292.0 + i * 19.0
+		draw_rect(Rect2(0, my, LEVEL_END, 8), Color(0.87, 0.91, 0.86, 0.045))
+
+	# Ground and platforms: soil strata, grass, pebbles and small roots.
 	for platform in get_tree().get_nodes_in_group("platforms"):
-		if is_instance_valid(platform):
-			var size: Vector2 = platform.get_child(0).shape.size
-			draw_rect(Rect2(platform.position - size / 2.0, size), Color("#252b51"))
-			draw_rect(Rect2(platform.position.x - size.x / 2.0, platform.position.y - size.y / 2.0, size.x, 7), Color("#41d9cc"))
-	for hazard in get_tree().get_nodes_in_group("hazards"):
-		pass
+		if not is_instance_valid(platform):
+			continue
+		var size: Vector2 = platform.get_child(0).shape.size
+		var rect := Rect2(platform.position - size / 2.0, size)
+		draw_rect(rect, Color("#51483a"))
+		draw_rect(Rect2(rect.position.x, rect.position.y + 8, size.x, size.y - 8), Color("#3d382f"))
+		draw_rect(Rect2(rect.position.x, rect.position.y, size.x, 10), Color("#4f6843"))
+		draw_rect(Rect2(rect.position.x, rect.position.y + 7, size.x, 4), Color("#7b8051"))
+		var detail_rng := RandomNumberGenerator.new()
+		detail_rng.seed = int(platform.position.x * 17.0 + size.x)
+		for d in range(int(size.x / 8.0)):
+			var dx := rect.position.x + detail_rng.randf_range(2.0, size.x - 2.0)
+			var dy := rect.position.y + detail_rng.randf_range(13.0, size.y - 8.0)
+			var pebble_size := detail_rng.randf_range(1.0, 3.6)
+			draw_ellipse(Rect2(dx, dy, pebble_size * 1.8, pebble_size), Color("#756b56") if d % 3 == 0 else Color("#2d3029"))
+		for g in range(int(size.x / 7.0)):
+			var gx := rect.position.x + detail_rng.randf_range(0.0, size.x)
+			var gy := rect.position.y + 2.0
+			draw_line(Vector2(gx, gy + 3), Vector2(gx + detail_rng.randf_range(-3.0, 3.0), gy - detail_rng.randf_range(1.0, 7.0)), Color("#87915a"), 1.4)
+
+	# Brambles and small plants along the forest floor.
+	var plant_rng := RandomNumberGenerator.new()
+	plant_rng.seed = 844
+	for i in range(160):
+		var px := plant_rng.randf_range(0.0, LEVEL_END)
+		var py := plant_rng.randf_range(385.0, 455.0)
+		var leaf_color := Color("#3c5940").lerp(Color("#8b925c"), plant_rng.randf())
+		draw_line(Vector2(px, py + 8), Vector2(px + plant_rng.randf_range(-7.0, 7.0), py - plant_rng.randf_range(2.0, 12.0)), leaf_color, 2.0)
+		if i % 4 == 0:
+			draw_circle(Vector2(px + 2, py + 1), plant_rng.randf_range(2.0, 4.0), Color("#a1a16c"))
+
+	# Spikes, crystals and the portal retain a clean game-readable silhouette.
 	for child in get_children():
-		if child is Area2D:
-			var kind: String = child.get_meta("kind", "")
-			if kind == "spike":
-				var count: int = child.get_meta("count", 3)
-				for i in range(count):
-					var px := child.position.x - count * 9.0 + i * 18.0
-					var points := PackedVector2Array([Vector2(px - 8, child.position.y + 6), Vector2(px, child.position.y - 12), Vector2(px + 8, child.position.y + 6)])
-					draw_colored_polygon(points, Color("#ff527c"))
-					draw_line(points[0], points[1], Color("#ffd2e0"), 2)
-			elif kind == "crystal":
-				var p: Vector2 = child.position
-				var points := PackedVector2Array([p + Vector2(0, -12), p + Vector2(9, 0), p + Vector2(0, 12), p + Vector2(-9, 0)])
-				draw_colored_polygon(points, Color("#5fffea"))
-				draw_line(p + Vector2(0, -8), p + Vector2(0, 7), Color.WHITE, 2)
-			elif kind == "goal":
-				var p: Vector2 = child.position
-				draw_rect(Rect2(p.x - 18, p.y - 42, 36, 84), Color("#a55cff"), false, 4)
-				draw_rect(Rect2(p.x - 10, p.y - 34, 20, 68), Color("#5fffea", 0.7))
+		if not child is Area2D:
+			continue
+		var kind: String = child.get_meta("kind", "")
+		if kind == "spike":
+			var count: int = child.get_meta("count", 3)
+			for i in range(count):
+				var px := child.position.x - count * 9.0 + i * 18.0
+				var points := PackedVector2Array([Vector2(px - 8, child.position.y + 6), Vector2(px, child.position.y - 12), Vector2(px + 8, child.position.y + 6)])
+				draw_colored_polygon(points, Color("#51443e"))
+				draw_colored_polygon(PackedVector2Array([points[0], points[1], Vector2(px - 1, child.position.y + 4)]), Color("#a3a18a"))
+				draw_line(points[0], points[1], Color("#d4cbb1"), 1.5)
+		elif kind == "crystal":
+			var p: Vector2 = child.position
+			draw_circle(p, 17, Color(0.42, 0.91, 0.88, 0.16))
+			var points := PackedVector2Array([p + Vector2(0, -12), p + Vector2(9, 0), p + Vector2(0, 12), p + Vector2(-9, 0)])
+			draw_colored_polygon(points, Color("#74ded0"))
+			draw_colored_polygon(PackedVector2Array([p + Vector2(0, -12), p + Vector2(0, 12), p + Vector2(-9, 0)]), Color("#b4fff0"))
+			draw_line(p + Vector2(0, -8), p + Vector2(0, 7), Color.WHITE, 2)
+		elif kind == "goal":
+			var p: Vector2 = child.position
+			draw_circle(p, 54, Color(0.42, 0.22, 0.72, 0.13))
+			draw_rect(Rect2(p.x - 18, p.y - 42, 36, 84), Color("#594c68"), false, 6)
+			draw_rect(Rect2(p.x - 13, p.y - 36, 26, 72), Color("#8b7ed0", 0.72))
+			draw_rect(Rect2(p.x - 7, p.y - 30, 14, 60), Color("#c4fff2", 0.82))
