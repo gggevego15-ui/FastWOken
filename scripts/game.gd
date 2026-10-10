@@ -12,6 +12,9 @@ var hud: CanvasLayer
 var score := 0
 var deaths := 0
 var won := false
+var menu_open := true
+var main_menu_layer: CanvasLayer
+var game_hud: CanvasLayer
 var message_label: Label
 var score_label: Label
 var touch_left := false
@@ -27,6 +30,9 @@ func _ready() -> void:
 	_spawn_player()
 	_build_ui()
 	_setup_forest_audio()
+	_show_main_menu()
+	if is_instance_valid(player):
+		player.controls_locked = true
 	queue_redraw()
 
 
@@ -256,6 +262,7 @@ func _spawn_player() -> void:
 
 func _build_ui() -> void:
 	hud = CanvasLayer.new()
+	game_hud = hud
 	add_child(hud)
 	var top := PanelContainer.new()
 	top.position = Vector2(18, 16)
@@ -291,6 +298,109 @@ func _build_ui() -> void:
 		_add_level_touch_button("LEVEL −", Vector2(360, 448), -1)
 		_add_level_touch_button("LEVEL +", Vector2(500, 448), 1)
 
+	var menu_button := Button.new()
+	menu_button.text = "LEVEL SELECT"
+	menu_button.position = Vector2(790, 16)
+	menu_button.size = Vector2(152, 42)
+	menu_button.add_theme_font_size_override("font_size", 15)
+	menu_button.add_theme_color_override("font_color", Color.WHITE)
+	menu_button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.92)))
+	hud.add_child(menu_button)
+	menu_button.pressed.connect(_show_main_menu)
+
+
+
+func _show_main_menu() -> void:
+	menu_open = true
+	if is_instance_valid(player):
+		player.controls_locked = true
+	if is_instance_valid(game_hud):
+		game_hud.visible = false
+	if is_instance_valid(main_menu_layer):
+		main_menu_layer.queue_free()
+	main_menu_layer = CanvasLayer.new()
+	main_menu_layer.layer = 10
+	add_child(main_menu_layer)
+
+	var shade := ColorRect.new()
+	shade.position = Vector2.ZERO
+	shade.size = Vector2(960, 540)
+	shade.color = Color(0.025, 0.055, 0.065, 0.94)
+	main_menu_layer.add_child(shade)
+
+	var panel := PanelContainer.new()
+	panel.position = Vector2(150, 24)
+	panel.size = Vector2(660, 492)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.12, 0.13, 0.97)))
+	main_menu_layer.add_child(panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 10)
+	panel.add_child(content)
+
+	var title := Label.new()
+	title.text = "FastWOken"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 38)
+	title.add_theme_color_override("font_color", Color("#8fffe3"))
+	content.add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = "FOREST TRIALS  •  SELECT YOUR LEVEL"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", Color("#c0d6c9"))
+	content.add_child(subtitle)
+
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 8)
+	content.add_child(grid)
+
+	var names := [
+		"01  Forest Entry", "02  Broken Canopy",
+		"03  Root Maze", "04  Mossy Cliffs",
+		"05  Flooded Hollow", "06  Thorn Run",
+		"07  Ravine Steps", "08  Nightwood",
+		"09  Shattered Bridge", "10  The Last Canopy"
+	]
+	for i in range(names.size()):
+		var level_button := Button.new()
+		level_button.text = names[i]
+		level_button.custom_minimum_size = Vector2(275, 48)
+		level_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		level_button.add_theme_font_size_override("font_size", 17)
+		level_button.add_theme_color_override("font_color", Color("#f1f7ee"))
+		level_button.add_theme_stylebox_override("normal", _panel_style(Color("#25413b")))
+		level_button.add_theme_stylebox_override("hover", _panel_style(Color("#387263")))
+		level_button.add_theme_stylebox_override("pressed", _panel_style(Color("#5a9a80")))
+		grid.add_child(level_button)
+		level_button.pressed.connect(_start_selected_level.bind(i))
+
+	var footer := Label.new()
+	footer.text = "PC: A/D or ←/→ to move • Space to jump • R to restart"
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	footer.add_theme_font_size_override("font_size", 13)
+	footer.add_theme_color_override("font_color", Color("#a7bcb2"))
+	content.add_child(footer)
+
+
+func _start_selected_level(index: int) -> void:
+	_load_level(index)
+	menu_open = false
+	if is_instance_valid(main_menu_layer):
+		main_menu_layer.queue_free()
+		main_menu_layer = null
+	if is_instance_valid(game_hud):
+		game_hud.visible = true
+	if is_instance_valid(player):
+		player.controls_locked = false
+		player.global_position = Vector2(80, 350)
+		player.velocity = Vector2.ZERO
+		player.spawn_position = player.global_position
+	queue_redraw()
+
 
 func _add_level_touch_button(caption: String, at: Vector2, direction: int) -> void:
 	var button := Button.new()
@@ -301,7 +411,7 @@ func _add_level_touch_button(caption: String, at: Vector2, direction: int) -> vo
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_stylebox_override("normal", _panel_style(Color(0.12, 0.22, 0.36, 0.86)))
 	hud.add_child(button)
-	button.pressed.connect(func(): _load_level(selected_level + direction))
+	button.pressed.connect(func(): _start_selected_level(selected_level + direction))
 
 func _panel_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -337,7 +447,7 @@ func _add_touch_button(caption: String, at: Vector2, action: String) -> void:
 		button.button_up.connect(func(): touch_jump = false)
 
 func _process(_delta: float) -> void:
-	if not is_instance_valid(player):
+	if menu_open or not is_instance_valid(player):
 		return
 	if touch_left != applied_touch_left:
 		if touch_left:
@@ -363,9 +473,9 @@ func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("restart"):
 		_respawn()
 	if Input.is_action_just_pressed("level_next"):
-		_load_level(selected_level + 1)
+		_start_selected_level(selected_level + 1)
 	if Input.is_action_just_pressed("level_previous"):
-		_load_level(selected_level - 1)
+		_start_selected_level(selected_level - 1)
 	queue_redraw()
 
 func _on_hazard_entered(body: Node2D) -> void:
