@@ -12,6 +12,7 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - Procedurally synthesized bird calls on a separate, quieter audio layer
 - Generated-in-code sound effects for jumping, collecting crystals, and activating the goal portal
 - 10 handcrafted challenge levels with distinct platform layouts and hazard patterns
+- First-launch tutorial explaining movement, jumping, hazards, crystals, and the goal portal; completion is saved so it does not repeat on later launches
 - Main menu with a selectable two-column list of all ten levels
 - Animated menu entrance with a fade-in backdrop, sliding panel, and staggered level buttons
 - Smooth fade-to-dark transitions when switching levels
@@ -32,6 +33,7 @@ A challenging 2D pixel-art platformer built with **Godot 4** for desktop and And
 - **R**: restart after a death or replay the current level after clearing it
 - **]** or **Page Up**: start the next level
 - **[** or **Page Down**: start the previous level
+- On the first launch, read the quick tutorial and press **LET'S GO!**; it is shown only once per saved profile
 - **LEVEL SELECT**: open the main menu and choose any unlocked level
 - Level selection fades smoothly between stages; menu elements animate into view
 - On touch devices, use the on-screen arrows and jump button.
