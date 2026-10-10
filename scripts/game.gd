@@ -392,15 +392,22 @@ func _build_ui() -> void:
 func _show_tutorial() -> void:
 	if not is_instance_valid(main_menu_layer):
 		return
+	# Put the tutorial above the menu without leaving an opaque, misplaced
+	# ColorRect covering the whole screen when the game first launches.
+	var tutorial_layer := CanvasLayer.new()
+	tutorial_layer.name = "TutorialLayer"
+	tutorial_layer.layer = 20
+	add_child(tutorial_layer)
+
 	var shade := ColorRect.new()
 	shade.name = "TutorialOverlay"
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.015, 0.025, 0.035, 0.94)
-	main_menu_layer.add_child(shade)
+	shade.color = Color(0.015, 0.025, 0.035, 0.82)
+	shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	tutorial_layer.add_child(shade)
 
 	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-280, -220)
+	panel.position = Vector2(200, 50)
 	panel.size = Vector2(560, 440)
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.105, 0.12, 0.99)))
 	shade.add_child(panel)
@@ -441,7 +448,7 @@ func _show_tutorial() -> void:
 	start_button.pressed.connect(func():
 		tutorial_completed = true
 		_save_progress()
-		shade.queue_free()
+		tutorial_layer.queue_free()
 	)
 
 
