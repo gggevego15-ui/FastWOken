@@ -87,7 +87,7 @@ func _make_forest_audio(birds_only: bool) -> AudioStreamWAV:
 			sample += sin(TAU * 83.0 * t) * 0.018
 		# Short fade at the loop boundary reduces clicks when playback repeats.
 		var fade_samples := int(SAMPLE_RATE * 0.035)
-		var fade := minf(1.0, float(i) / fade_samples, float(sample_count - 1 - i) / fade_samples)
+		var fade := minf(1.0, minf(float(i) / fade_samples, float(sample_count - 1 - i) / fade_samples))
 		sample *= maxf(0.0, fade)
 		var signed_sample := int(clampf(sample, -0.95, 0.95) * 32767.0)
 		if signed_sample < 0:
