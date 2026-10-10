@@ -5,6 +5,7 @@ var level_end := 2240.0
 var selected_level := 0
 var unlocked_level := 0
 var best_crystals: Dictionary = {}
+var tutorial_completed := false
 const PROGRESS_PATH := "user://fastwoken_progress.cfg"
 var crystal_total := 8
 const FLOOR_Y := 468.0
@@ -37,6 +38,8 @@ func _ready() -> void:
 	_build_ui()
 	_setup_forest_audio()
 	_show_main_menu()
+	if not tutorial_completed:
+		_show_tutorial()
 	if is_instance_valid(player):
 		player.controls_locked = true
 	queue_redraw()
@@ -51,12 +54,14 @@ func _load_progress() -> void:
 	unlocked_level = clampi(int(config.get_value("progress", "unlocked_level", 0)), 0, 9)
 	var stored_scores = config.get_value("progress", "best_crystals", {})
 	best_crystals = stored_scores if stored_scores is Dictionary else {}
+	tutorial_completed = bool(config.get_value("progress", "tutorial_completed", false))
 
 
 func _save_progress() -> void:
 	var config := ConfigFile.new()
 	config.set_value("progress", "unlocked_level", unlocked_level)
 	config.set_value("progress", "best_crystals", best_crystals)
+	config.set_value("progress", "tutorial_completed", tutorial_completed)
 	var error := config.save(PROGRESS_PATH)
 	if error != OK:
 		push_warning("FastWOken could not save progress (error %d)." % error)
@@ -382,6 +387,62 @@ func _build_ui() -> void:
 	hud.add_child(menu_button)
 	menu_button.pressed.connect(_show_main_menu)
 
+
+
+func _show_tutorial() -> void:
+	if not is_instance_valid(main_menu_layer):
+		return
+	var shade := ColorRect.new()
+	shade.name = "TutorialOverlay"
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.015, 0.025, 0.035, 0.94)
+	main_menu_layer.add_child(shade)
+
+	var panel := PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	panel.position = Vector2(-280, -220)
+	panel.size = Vector2(560, 440)
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.055, 0.105, 0.12, 0.99)))
+	shade.add_child(panel)
+
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 13)
+	panel.add_child(content)
+
+	var title := Label.new()
+	title.text = "FIRST TIME IN THE FOREST?"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 27)
+	title.add_theme_color_override("font_color", Color("#8fffe3"))
+	content.add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = "QUICK TUTORIAL"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", Color("#c0d6c9"))
+	content.add_child(subtitle)
+
+	var instructions := Label.new()
+	instructions.text = "MOVE     A / D or LEFT / RIGHT\nJUMP     SPACE, W or UP\nRESTART  R after a fall\n\nCollect crystals for points. Avoid spikes\nand reach the glowing portal to finish.\nEach cleared level unlocks the next one.\n\nPHONE / TABLET: use the on-screen buttons."
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	instructions.add_theme_font_size_override("font_size", 18)
+	instructions.add_theme_color_override("font_color", Color("#f1f7ee"))
+	instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(instructions)
+
+	var start_button := Button.new()
+	start_button.text = "LET'S GO!"
+	start_button.custom_minimum_size = Vector2(0, 48)
+	start_button.add_theme_font_size_override("font_size", 19)
+	start_button.add_theme_color_override("font_color", Color.WHITE)
+	start_button.add_theme_stylebox_override("normal", _panel_style(Color("#267d6a")))
+	content.add_child(start_button)
+	start_button.pressed.connect(func():
+		tutorial_completed = true
+		_save_progress()
+		shade.queue_free()
+	)
 
 
 func _show_main_menu() -> void:
